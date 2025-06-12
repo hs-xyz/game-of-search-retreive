@@ -98,7 +98,7 @@ export class RedisAdapter implements DatabaseAdapter {
         title: SchemaFieldTypes.TEXT,
         content: SchemaFieldTypes.TEXT,
         author: SchemaFieldTypes.TEXT,
-        tags: SchemaFieldTypes.TAG
+        tags: SchemaFieldTypes.TEXT
       }, {
         ON: 'HASH',
         PREFIX: 'article:'
@@ -128,7 +128,7 @@ export class RedisAdapter implements DatabaseAdapter {
             title: article.title,
             content: article.content,
             author: article.author,
-            tags: article.tags
+            tags: article.tags.replace(/,/g, ' ')
           });
         }
 

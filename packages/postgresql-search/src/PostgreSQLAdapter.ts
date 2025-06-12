@@ -53,7 +53,7 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
     }
 
     await this.pool.query(`
-      UPDATE articles SET ts_vector = to_tsvector('english', title || ' ' || content || ' ' || author)
+      UPDATE articles SET ts_vector = to_tsvector('english', title || ' ' || content || ' ' || author || ' ' || array_to_string(tags, ' '))
     `);
 
     console.log(`Seeded ${articles.length} articles to PostgreSQL`);
