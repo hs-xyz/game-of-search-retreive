@@ -62,51 +62,28 @@ export class MongoDBAdapter implements DatabaseAdapter {
     console.log(`Seeded ${articles.length} articles to MongoDB with enhanced search fields`);
   }
 
-  async search(query: string, limit: number): Promise<{ results: any[]; total: number }> {
-    const queryWords = query.toLowerCase().split(/\s+/).filter(word => word.length > 2);
+  async search(query: string, limit: number): Promise<{ results: any[]; total: number; }> {
+    const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(escapedQuery, 'i');
     
-    const textSearchQuery = { $text: { $search: query } };
-    const totalCount = await this.collection.countDocuments(textSearchQuery);
-    
-    const textResults = await this.collection.find(
-      textSearchQuery,
-      { score: { $meta: 'textScore' } }
-    )
-    .sort({ score: { $meta: 'textScore' } })
-    .limit(limit)
-    .toArray();
+    const searchCondition = {
+      $or: [
+        { title: { $regex: regex } },
+        { content: { $regex: regex } },
+        { author: { $regex: regex } },
+        { searchable_text: { $regex: regex } }
+      ]
+    };
 
-    let results = textResults;
-    let adjustedTotal = totalCount;
-    
-    if (textResults.length < limit && queryWords.length > 0) {
-      const regexQueries = queryWords.map(word => ({
-        $or: [
-          { title: { $regex: word, $options: 'i' } },
-          { content: { $regex: word, $options: 'i' } },
-          { author: { $regex: word, $options: 'i' } }
-        ]
-      }));
+    const results = await this.collection.find(searchCondition)
+      .limit(limit)
+      .toArray();
 
-      const regexQuery = {
-        $and: regexQueries,
-        _id: { $nin: textResults.map((r: any) => r._id) }
-      };
-
-      const regexTotal = await this.collection.countDocuments(regexQuery);
-      adjustedTotal = totalCount + regexTotal;
-
-      const regexResults = await this.collection
-        .find(regexQuery)
-        .limit(limit - textResults.length)
-        .toArray();
-
-      results = [...textResults, ...regexResults];
-    }
+    const total = await this.collection.countDocuments(searchCondition);
 
     return {
       results,
-      total: adjustedTotal
+      total
     };
   }
 

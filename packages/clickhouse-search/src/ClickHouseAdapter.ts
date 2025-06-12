@@ -88,65 +88,39 @@ export class ClickHouseAdapter implements DatabaseAdapter {
     console.log(`Seeded ${articles.length} articles to ClickHouse with enhanced search optimization`);
   }
 
-  async search(query: string, limit: number): Promise<{ results: any[]; total: number }> {
-    const queryStr = query.toLowerCase();
-    const queryWords = queryStr.split(/\s+/).filter(word => word.length > 2);
+  async search(query: string, limit: number): Promise<{ results: any[]; total: number; }> {
+    const searchPatterns = [query.toLowerCase()];
     
-    let whereConditions = [];
-    
-    if (queryWords.length > 1) {
-      const wordConditions = queryWords.map(word => 
-        `(positionCaseInsensitive(title, '${word}') > 0 OR positionCaseInsensitive(content, '${word}') > 0 OR positionCaseInsensitive(author, '${word}') > 0)`
-      );
-      whereConditions.push(`(${wordConditions.join(' AND ')})`);
-    }
-    
-    whereConditions.push(`(multiSearchAnyCaseInsensitive(searchable_text, [${queryWords.map(w => `'${w}'`).join(',')}]) > 0)`);
-    whereConditions.push(`(positionCaseInsensitive(searchable_text, '${queryStr}') > 0)`);
-
-    const whereClause = whereConditions.join(' OR ');
-
-    const countQuery = `
-      SELECT count() as total
-      FROM articles 
-      WHERE ${whereClause}
-    `;
-
-    const countResult = await this.client.query({
-      query: countQuery,
-      format: 'JSONEachRow'
-    });
-
-    const countData = await countResult.json() as any;
-    const totalCount = Array.isArray(countData) ? countData[0]?.total || 0 : countData.total || 0;
-
     const searchQuery = `
-      SELECT 
-        id,
-        title,
-        content,
-        author,
-        tags,
-        (positionCaseInsensitive(title, '${queryStr}') * 10 + 
-         positionCaseInsensitive(content, '${queryStr}') + 
-         positionCaseInsensitive(author, '${queryStr}') * 5) as relevance_score
-      FROM articles 
-      WHERE ${whereClause}
-      ORDER BY relevance_score DESC, id ASC
+      SELECT *
+      FROM articles
+      WHERE multiSearchAnyCaseInsensitive(searchable_text, ${JSON.stringify(searchPatterns)})
+         OR multiSearchAnyCaseInsensitive(title, ${JSON.stringify(searchPatterns)})
+         OR multiSearchAnyCaseInsensitive(content, ${JSON.stringify(searchPatterns)})
+         OR multiSearchAnyCaseInsensitive(author, ${JSON.stringify(searchPatterns)})
       LIMIT ${limit}
     `;
+    
+    const countQuery = `
+      SELECT count() as total
+      FROM articles
+      WHERE multiSearchAnyCaseInsensitive(searchable_text, ${JSON.stringify(searchPatterns)})
+         OR multiSearchAnyCaseInsensitive(title, ${JSON.stringify(searchPatterns)})
+         OR multiSearchAnyCaseInsensitive(content, ${JSON.stringify(searchPatterns)})
+         OR multiSearchAnyCaseInsensitive(author, ${JSON.stringify(searchPatterns)})
+    `;
 
-    const result = await this.client.query({
-      query: searchQuery,
-      format: 'JSONEachRow'
-    });
+    const [results, countResult] = await Promise.all([
+      this.client.query({ query: searchQuery, format: 'JSON' }),
+      this.client.query({ query: countQuery, format: 'JSON' })
+    ]);
 
-    const data = await result.json() as any;
-    const results = Array.isArray(data) ? data : [data];
+    const resultData = await results.json() as { data: any[] };
+    const countData = await countResult.json() as { data: { total: number }[] };
 
     return {
-      results,
-      total: totalCount
+      results: resultData.data || [],
+      total: countData.data[0]?.total || 0
     };
   }
 

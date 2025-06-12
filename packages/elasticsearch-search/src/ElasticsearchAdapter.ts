@@ -20,6 +20,7 @@ export class ElasticsearchAdapter implements DatabaseAdapter {
         settings: {
           number_of_shards: 1,
           number_of_replicas: 0,
+          max_result_window: 200000,
           analysis: {
             analyzer: {
               article_analyzer: {
@@ -69,7 +70,7 @@ export class ElasticsearchAdapter implements DatabaseAdapter {
       }
     });
 
-    console.log('Elasticsearch index created with optimized mapping');
+    console.log('Elasticsearch index created with optimized mapping and increased max_result_window');
     await this.seedData();
   }
 
@@ -190,7 +191,8 @@ export class ElasticsearchAdapter implements DatabaseAdapter {
         query: { match_all: {} },
         from: offset,
         size: limit,
-        sort: [{ id: 'asc' }]
+        sort: [{ id: 'asc' }],
+        track_total_hits: true
       }
     });
 
