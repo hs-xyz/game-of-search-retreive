@@ -1,0 +1,78 @@
+services:
+  redis-stack:
+    image: redis/redis-stack:latest
+    ports:
+      - "6379:6379"
+      - "8001:8001"
+    environment:
+      - REDIS_ARGS=--requirepass redis123
+    volumes:
+      - redis_data:/data
+
+  mongodb:
+    image: mongo:8.0
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=mongo123
+    volumes:
+      - mongo_data:/data/db
+
+  postgresql:
+    image: postgres:17
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=fulltext_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+    volumes:
+      - elastic_data:/usr/share/elasticsearch/data
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    environment:
+      - CLICKHOUSE_DB=fulltext_db
+      - CLICKHOUSE_USER=admin
+      - CLICKHOUSE_PASSWORD=clickhouse123
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+
+  leveldb-app:
+    build:
+      context: ./packages/leveldb-search
+      dockerfile: Dockerfile
+    ports:
+      - "3006:3000"
+    volumes:
+      - leveldb_data:/app/data
+    depends_on:
+      - redis-stack
+      - mongodb
+      - postgresql
+      - elasticsearch
+      - clickhouse
+
+volumes:
+  redis_data:
+  mongo_data:
+  postgres_data:
+  elastic_data:
+  clickhouse_data:
+  leveldb_data: 

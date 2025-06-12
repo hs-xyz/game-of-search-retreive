@@ -1,0 +1,17 @@
+{
+  "name": "fulltext-search-comparison",
+  "private": true,
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "clean": "turbo run clean",
+    "start:dashboard": "cd apps/comparison-dashboard && pnpm run dev"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.1",
+    "@turbo/gen": "^2.3.1"
+  },
+  "packageManager": "pnpm@10.12.1"
+}
