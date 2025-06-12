@@ -1,83 +1,102 @@
-# Full-Text Search Comparison
+# Database Search Performance Comparison
 
-A comprehensive comparison of full-text search capabilities across 6 different databases:
+A comprehensive comparison of full-text search capabilities across different database technologies.
 
-1. **Redis Stack** - In-memory database with RediSearch module
-2. **MongoDB** - Document database with text indexes
-3. **PostgreSQL** - Relational database with full-text search
-4. **Elasticsearch** - Dedicated search engine
-5. **ClickHouse** - Analytical database with text search
-6. **LevelDB** - Fast key-value store with custom search
+## Supported Databases
+
+1. **Redis Stack** - Using RediSearch for full-text indexing
+2. **MongoDB** - Native text search with regex fallback
+3. **PostgreSQL** - Full-text search with tsvector and GIN indexes
+4. **Elasticsearch** - Dedicated search engine with advanced text analysis
+5. **ClickHouse** - Fast columnar database with text search functions
+6. **DuckDB** - Analytical SQL database with efficient text search
 
 ## Project Structure
 
 ```
-├── packages/                   # Database implementations
-│   ├── shared-utils/          # Common utilities and data
-│   ├── redis-search/          # Redis Stack implementation
-│   ├── mongodb-search/        # MongoDB implementation  
-│   ├── postgresql-search/     # PostgreSQL implementation
-│   ├── elasticsearch-search/  # Elasticsearch implementation
-│   ├── clickhouse-search/     # ClickHouse implementation
-│   └── leveldb-search/        # LevelDB implementation
-└── apps/
-    └── comparison-dashboard/   # Web interface for comparisons
+├── apps/
+│   └── comparison-dashboard/    # Web dashboard for comparisons
+├── packages/
+│   ├── shared-utils/           # Common utilities and test data
+│   ├── search-framework/       # Base interfaces and types
+│   ├── redis-search/           # Redis Stack implementation
+│   ├── mongodb-search/         # MongoDB implementation
+│   ├── postgresql-search/      # PostgreSQL implementation
+│   ├── elasticsearch-search/   # Elasticsearch implementation
+│   ├── clickhouse-search/      # ClickHouse implementation
+│   └── duckdb-search/          # DuckDB implementation
+└── docker-compose.yml          # All services configuration
 ```
 
 ## Quick Start
 
-### Docker Compose (Recommended)
-```bash
-docker-compose up -d
-```
+1. **Clone and Setup**
+   ```bash
+   git clone <repository>
+   cd database-search-comparison
+   ```
 
-### Manual Development
-```bash
-pnpm install
-pnpm run dev
-```
+2. **Start All Services**
+   ```bash
+   docker compose up --build
+   ```
 
-All services will be available at:
+3. **Access the Dashboard**
+   - **Main Dashboard**: http://localhost:3000
 
-## Service Endpoints
+## Individual Database APIs
 
-All services implement the same REST API:
-
-- **Redis**: http://localhost:3001
-- **MongoDB**: http://localhost:3002  
+- **Redis Stack**: http://localhost:3001
+- **MongoDB**: http://localhost:3002
 - **PostgreSQL**: http://localhost:3003
 - **Elasticsearch**: http://localhost:3004
 - **ClickHouse**: http://localhost:3005
-- **LevelDB**: http://localhost:3006
+- **DuckDB**: http://localhost:3006
 
-### Standard Endpoints
+## API Endpoints
 
-- `GET /health` - Service health check
+Each database service provides these endpoints:
+- `GET /health` - Service health status
 - `GET /search?q={query}&limit={limit}` - Search articles
-- `GET /benchmark` - Performance benchmarks
+- `GET /all-records?limit={limit}&offset={offset}` - Get all records
+- `GET /benchmark` - Run performance benchmarks
 
-Additional endpoints vary by database (e.g., `/search-prefix` for LevelDB, `/search-phrase` for PostgreSQL).
+Additional endpoints vary by database (e.g., `/search-phrase` for PostgreSQL).
 
-## 🎯 Latest Technology Stack
+## Features
 
-This project uses the latest versions of all technologies:
+- **100,000 sample articles** for realistic testing
+- **Consistent API** across all databases
+- **Performance benchmarks** with timing metrics
+- **Web dashboard** for easy comparison
+- **Docker containerization** for easy deployment
+- **Health monitoring** for all services
 
-- **Node.js 22** (latest LTS)
-- **TypeScript 5.7** with ES2023 target
-- **Express 5.0** (latest major version)
-- **Turbo 2.3** (latest monorepo tools)
-- **pnpm 10** (fastest package manager)
-- **Docker images**: Latest stable versions of all databases
+## Technology Stack
 
-All packages have been updated to their latest versions for optimal performance and security.
+- **Backend**: Node.js + TypeScript
+- **Frontend**: Vanilla JavaScript (dashboard)
+- **Containerization**: Docker + Docker Compose
+- **Package Management**: pnpm with workspaces
 
-## 🔧 Shared Utilities
+## Sample Queries
 
-The project uses a centralized `shared-utils` package that provides:
+The benchmark includes these test queries:
+- "machine learning"
+- "database"
+- "web development"
+- "artificial intelligence"
+- "data science"
 
-- **Common data types** and interfaces
-- **Standardized seed data** (5 test articles)
-- **Database-specific data transformers**
-- **Benchmark query sets**
+## Development
 
-This eliminates code duplication and ensures consistency across all database implementations. 
+```bash
+# Install dependencies
+pnpm install
+
+# Build all packages
+pnpm build
+
+# Start development mode
+pnpm dev
+``` 

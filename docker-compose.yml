@@ -121,16 +121,14 @@ services:
     depends_on:
       - clickhouse
 
-  leveldb-search:
+  duckdb-search:
     build:
       context: .
-      dockerfile: ./packages/leveldb-search/Dockerfile
+      dockerfile: ./packages/duckdb-search/Dockerfile
     ports:
       - "3006:3000"
     environment:
       - PORT=3000
-    volumes:
-      - leveldb_data:/app/data
 
   comparison-dashboard:
     build:
@@ -144,12 +142,11 @@ services:
       - postgresql-search
       - elasticsearch-search
       - clickhouse-search
-      - leveldb-search
+      - duckdb-search
 
 volumes:
   redis_data:
   mongo_data:
   postgres_data:
   elastic_data:
-  clickhouse_data:
-  leveldb_data: 
+  clickhouse_data: 
