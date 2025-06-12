@@ -63,17 +63,25 @@ export class MongoDBAdapter implements DatabaseAdapter {
   }
 
   async search(query: string, limit: number): Promise<{ results: any[]; total: number; }> {
-    const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const wordBoundaryRegex = new RegExp(`\\b${escapedQuery}\\b`, 'i');
+    const queryWords = query.toLowerCase().split(/\s+/).filter(word => word.length > 0);
     
-    const searchCondition = {
-      $or: [
-        { title: { $regex: wordBoundaryRegex } },
-        { content: { $regex: wordBoundaryRegex } },
-        { author: { $regex: wordBoundaryRegex } },
-        { searchable_text: { $regex: wordBoundaryRegex } }
-      ]
-    };
+    const wordConditions = queryWords.map(word => {
+      const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const wordBoundaryRegex = new RegExp(`\\b${escapedWord}\\b`, 'i');
+      
+      return {
+        $or: [
+          { title: { $regex: wordBoundaryRegex } },
+          { content: { $regex: wordBoundaryRegex } },
+          { author: { $regex: wordBoundaryRegex } },
+          { searchable_text: { $regex: wordBoundaryRegex } }
+        ]
+      };
+    });
+
+    const searchCondition = wordConditions.length === 1 
+      ? wordConditions[0] 
+      : { $and: wordConditions };
 
     const results = await this.collection.find(searchCondition)
       .limit(limit)
@@ -108,12 +116,12 @@ export class MongoDBAdapter implements DatabaseAdapter {
 
     for (const query of benchmarkQueries) {
       const start = Date.now();
-      const searchResults = await this.collection.find({ $text: { $search: query } }).toArray();
+      const searchResult = await this.search(query, 50000);
       const duration = Date.now() - start;
       
       results.push({
         query,
-        resultCount: searchResults.length,
+        resultCount: searchResult.total,
         duration: `${duration}ms`
       });
     }

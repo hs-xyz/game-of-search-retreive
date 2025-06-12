@@ -7,57 +7,88 @@ export class ClickHouseAdapter implements DatabaseAdapter {
   private client: any;
 
   async initialize(): Promise<void> {
-    this.client = createClient({
-      host: 'http://clickhouse:8123',
-      username: 'admin',
-      password: 'clickhouse123',
-      database: 'fulltext_db'
-    });
-
-    await this.client.command({
-      query: 'CREATE DATABASE IF NOT EXISTS fulltext_db'
-    });
-
-    await this.client.command({
-      query: `
-        CREATE TABLE IF NOT EXISTS articles (
-          id UInt32,
-          title String,
-          content String,
-          author LowCardinality(String),
-          tags Array(String),
-          searchable_text String,
-          title_tokens Array(String),
-          content_tokens Array(String)
-        ) ENGINE = MergeTree()
-        ORDER BY (author, id)
-        SETTINGS index_granularity = 8192
-      `
-    });
-
-    await this.client.command({
-      query: `
-        ALTER TABLE articles 
-        ADD INDEX IF NOT EXISTS title_fulltext_idx title TYPE tokenbf_v1(32768, 3, 0) GRANULARITY 1
-      `
-    });
-
-    await this.client.command({
-      query: `
-        ALTER TABLE articles 
-        ADD INDEX IF NOT EXISTS content_fulltext_idx content TYPE tokenbf_v1(32768, 3, 0) GRANULARITY 1
-      `
-    });
-
-    await this.client.command({
-      query: `
-        ALTER TABLE articles 
-        ADD INDEX IF NOT EXISTS searchable_text_idx searchable_text TYPE tokenbf_v1(32768, 3, 0) GRANULARITY 1
-      `
-    });
-
+    await this.initializeWithRetry();
     console.log('ClickHouse schema created with optimized indexes');
     await this.seedData();
+  }
+
+  private async initializeWithRetry(maxRetries: number = 10, baseDelay: number = 2000): Promise<void> {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`ClickHouse connection attempt ${attempt}/${maxRetries}...`);
+        
+        this.client = createClient({
+          host: 'http://clickhouse:8123',
+          username: 'admin',
+          password: 'clickhouse123',
+          database: 'fulltext_db'
+        });
+
+        await this.client.ping();
+        console.log('ClickHouse connection established');
+
+        await this.client.command({
+          query: 'CREATE DATABASE IF NOT EXISTS fulltext_db'
+        });
+
+        await this.client.command({
+          query: `
+            CREATE TABLE IF NOT EXISTS articles (
+              id UInt32,
+              title String,
+              content String,
+              author LowCardinality(String),
+              tags Array(String),
+              searchable_text String,
+              title_tokens Array(String),
+              content_tokens Array(String)
+            ) ENGINE = MergeTree()
+            ORDER BY (author, id)
+            SETTINGS index_granularity = 8192
+          `
+        });
+
+        await this.client.command({
+          query: `
+            ALTER TABLE articles 
+            ADD INDEX IF NOT EXISTS title_fulltext_idx title TYPE tokenbf_v1(32768, 3, 0) GRANULARITY 1
+          `
+        });
+
+        await this.client.command({
+          query: `
+            ALTER TABLE articles 
+            ADD INDEX IF NOT EXISTS content_fulltext_idx content TYPE tokenbf_v1(32768, 3, 0) GRANULARITY 1
+          `
+        });
+
+        await this.client.command({
+          query: `
+            ALTER TABLE articles 
+            ADD INDEX IF NOT EXISTS searchable_text_idx searchable_text TYPE tokenbf_v1(32768, 3, 0) GRANULARITY 1
+          `
+        });
+
+        console.log('ClickHouse schema setup completed successfully');
+        return;
+
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error(`ClickHouse connection attempt ${attempt} failed:`, errorMessage);
+        
+        if (attempt === maxRetries) {
+          throw new Error(`Failed to connect to ClickHouse after ${maxRetries} attempts. Last error: ${errorMessage}`);
+        }
+
+        const delay = baseDelay * Math.pow(1.5, attempt - 1);
+        console.log(`Waiting ${delay}ms before retry...`);
+        await this.sleep(delay);
+      }
+    }
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   private async seedData(): Promise<void> {
@@ -89,39 +120,53 @@ export class ClickHouseAdapter implements DatabaseAdapter {
   }
 
   async search(query: string, limit: number): Promise<{ results: any[]; total: number; }> {
-    const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const strictWordBoundaryPattern = `(?:^|\\s)${escapedQuery}(?:\\s|$)`;
+    const queryWords = query.toLowerCase().split(/\s+/).filter(word => word.length > 0);
     
-    const searchQuery = `
-      SELECT *
+    const wordConditions = queryWords.map(word => {
+      const escapedWord = word.replace(/'/g, "''");
+      return `(positionCaseInsensitive(title, '${escapedWord}') > 0 OR
+               positionCaseInsensitive(content, '${escapedWord}') > 0 OR
+               positionCaseInsensitive(author, '${escapedWord}') > 0 OR
+               positionCaseInsensitive(searchable_text, '${escapedWord}') > 0)`;
+    });
+
+    const whereClause = wordConditions.join(' AND ');
+    
+    const searchQuery = limit > 0 ? `
+      SELECT id, title, content, author, tags
       FROM articles
-      WHERE match(lower(searchable_text), lower('${strictWordBoundaryPattern}'))
-         OR match(lower(title), lower('${strictWordBoundaryPattern}'))
-         OR match(lower(content), lower('${strictWordBoundaryPattern}'))
-         OR match(lower(author), lower('${strictWordBoundaryPattern}'))
+      WHERE ${whereClause}
+      ORDER BY id ASC
       LIMIT ${limit}
-    `;
+    ` : '';
     
     const countQuery = `
       SELECT count() as total
       FROM articles
-      WHERE match(lower(searchable_text), lower('${strictWordBoundaryPattern}'))
-         OR match(lower(title), lower('${strictWordBoundaryPattern}'))
-         OR match(lower(content), lower('${strictWordBoundaryPattern}'))
-         OR match(lower(author), lower('${strictWordBoundaryPattern}'))
+      WHERE ${whereClause}
     `;
 
-    const [results, countResult] = await Promise.all([
-      this.client.query({ query: searchQuery, format: 'JSON' }),
-      this.client.query({ query: countQuery, format: 'JSON' })
-    ]);
+    const queries = limit > 0 
+      ? [
+          this.client.query({ query: searchQuery, format: 'JSONEachRow' }),
+          this.client.query({ query: countQuery, format: 'JSONEachRow' })
+        ]
+      : [this.client.query({ query: countQuery, format: 'JSONEachRow' })];
 
-    const resultData = await results.json() as { data: any[] };
-    const countData = await countResult.json() as { data: { total: number }[] };
+    const queryResults = await Promise.all(queries);
+    
+    const countData = await queryResults[limit > 0 ? 1 : 0].json() as any;
+    const total = Array.isArray(countData) ? countData[0]?.total || 0 : countData.total || 0;
+
+    let results = [];
+    if (limit > 0) {
+      const resultData = await queryResults[0].json() as any;
+      results = Array.isArray(resultData) ? resultData : [resultData];
+    }
 
     return {
-      results: resultData.data || [],
-      total: countData.data[0]?.total || 0
+      results,
+      total
     };
   }
 
@@ -162,22 +207,12 @@ export class ClickHouseAdapter implements DatabaseAdapter {
     for (const query of benchmarkQueries) {
       const start = Date.now();
       
-      const result = await this.client.query({
-        query: `
-          SELECT count() as count
-          FROM articles 
-          WHERE multiSearchAnyCaseInsensitive(searchable_text, ['${query.toLowerCase()}']) > 0
-        `,
-        format: 'JSONEachRow'
-      });
-      
-      const data = await result.json() as any;
-      const count = Array.isArray(data) ? data[0]?.count || 0 : data.count || 0;
+      const result = await this.search(query, 0);
       const duration = Date.now() - start;
       
       results.push({
         query,
-        resultCount: count,
+        resultCount: result.total,
         duration: `${duration}ms`
       });
     }

@@ -145,7 +145,7 @@ export class ElasticsearchAdapter implements DatabaseAdapter {
           minimum_should_match: 1
         }
       },
-      size: limit,
+      size: limit === 0 ? 0 : limit,
       track_total_hits: true,
       _source: ['id', 'title', 'content', 'author', 'tags']
     };
@@ -196,26 +196,12 @@ export class ElasticsearchAdapter implements DatabaseAdapter {
     for (const query of benchmarkQueries) {
       const start = Date.now();
       
-      const response = await this.client.search({
-        index: this.indexName,
-        body: {
-          query: {
-            multi_match: {
-              query,
-              fields: ['title^3', 'content', 'author^2', 'searchable_text'],
-              type: 'best_fields' as const,
-              fuzziness: 'AUTO'
-            }
-          },
-          size: 0
-        }
-      });
-      
+      const searchResult = await this.search(query, 0);
       const duration = Date.now() - start;
       
       results.push({
         query,
-        resultCount: (response.hits?.total as any)?.value || response.hits?.total || 0,
+        resultCount: searchResult.total,
         duration: `${duration}ms`
       });
     }
