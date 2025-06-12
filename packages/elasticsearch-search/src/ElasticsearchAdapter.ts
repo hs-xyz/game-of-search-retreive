@@ -40,7 +40,6 @@ export class ElasticsearchAdapter implements DatabaseAdapter {
             title: { 
               type: 'text',
               analyzer: 'article_analyzer',
-              boost: 3.0,
               fields: {
                 keyword: { type: 'keyword' },
                 suggest: { type: 'completion' }
@@ -48,13 +47,11 @@ export class ElasticsearchAdapter implements DatabaseAdapter {
             },
             content: { 
               type: 'text',
-              analyzer: 'article_analyzer',
-              boost: 1.0
+              analyzer: 'article_analyzer'
             },
             author: { 
               type: 'text',
               analyzer: 'article_analyzer',
-              boost: 2.0,
               fields: {
                 keyword: { type: 'keyword' }
               }

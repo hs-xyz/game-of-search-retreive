@@ -68,16 +68,16 @@ export class ClickHouseAdapter implements DatabaseAdapter {
       query: 'TRUNCATE TABLE articles'
     });
 
-    const values = articles.map(article => [
-      parseInt(article.id),
-      article.title,
-      article.content,
-      article.author,
-      article.tags,
-      `${article.title} ${article.content} ${article.author} ${article.tags.join(' ')}`,
-      article.title.toLowerCase().split(/\W+/).filter(Boolean),
-      article.content.toLowerCase().split(/\W+/).filter(Boolean)
-    ]);
+    const values = articles.map(article => ({
+      id: parseInt(article.id),
+      title: article.title,
+      content: article.content,
+      author: article.author,
+      tags: article.tags,
+      searchable_text: `${article.title} ${article.content} ${article.author} ${article.tags.join(' ')}`,
+      title_tokens: article.title.toLowerCase().split(/\W+/).filter(Boolean),
+      content_tokens: article.content.toLowerCase().split(/\W+/).filter(Boolean)
+    }));
 
     await this.client.insert({
       table: 'articles',

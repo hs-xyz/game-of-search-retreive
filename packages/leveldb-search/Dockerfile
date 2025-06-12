@@ -8,6 +8,7 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/shared-utils ./packages/shared-utils/
+COPY packages/search-framework ./packages/search-framework/
 COPY packages/leveldb-search/package.json ./packages/leveldb-search/
 
 RUN pnpm install --frozen-lockfile

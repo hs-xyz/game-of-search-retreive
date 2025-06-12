@@ -18,24 +18,32 @@ export class MongoDBAdapter implements DatabaseAdapter {
     this.db = this.client.db('fulltext_db');
     this.collection = this.db.collection('articles');
     
+    try {
+      await this.collection.dropIndexes();
+      console.log('Dropped existing indexes');
+    } catch (error) {
+      console.log('No indexes to drop or error dropping indexes:', error);
+    }
+    
     await this.collection.createIndex({
       title: 'text',
       content: 'text',
-      author: 'text'
+      author: 'text',
+      searchable_text: 'text'
     }, {
       weights: {
         title: 10,
         content: 1,
-        author: 5
+        author: 5,
+        searchable_text: 2
       },
-      name: 'article_text_index'
+      name: 'comprehensive_text_index'
     });
     
-    await this.collection.createIndex({ searchable_text: 'text' }, { name: 'searchable_text_index' });
     await this.collection.createIndex({ title: 1 });
     await this.collection.createIndex({ author: 1 });
     
-    console.log('Text indexes created with weights');
+    console.log('Comprehensive text index created with weights');
     await this.seedData();
   }
 

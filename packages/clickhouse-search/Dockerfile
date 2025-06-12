@@ -6,6 +6,7 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/shared-utils ./packages/shared-utils/
+COPY packages/search-framework ./packages/search-framework/
 COPY packages/clickhouse-search/package.json ./packages/clickhouse-search/
 
 RUN pnpm install --frozen-lockfile
