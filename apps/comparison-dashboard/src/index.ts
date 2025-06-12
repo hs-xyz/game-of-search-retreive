@@ -15,8 +15,7 @@ const databases = [
   { name: 'PostgreSQL', url: 'http://localhost:3003', port: 3003 },
   { name: 'Elasticsearch', url: 'http://localhost:3004', port: 3004 },
   { name: 'ClickHouse', url: 'http://localhost:3005', port: 3005 },
-  { name: 'LevelDB', url: 'http://localhost:3006', port: 3006 },
-  { name: 'RocksDB', url: 'http://localhost:3007', port: 3007 }
+  { name: 'LevelDB', url: 'http://localhost:3006', port: 3006 }
 ];
 
 const makeRequest = async (url: string, timeout = 5000) => {

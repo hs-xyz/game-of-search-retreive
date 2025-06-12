@@ -2,18 +2,16 @@ FROM node:22-alpine
 
 WORKDIR /app
 
-RUN apk add --no-cache python3 make g++
-
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/shared-utils ./packages/shared-utils/
-COPY packages/leveldb-search/package.json ./packages/leveldb-search/
+COPY packages/mongodb-search/package.json ./packages/mongodb-search/
 
 RUN pnpm install --frozen-lockfile
 
-COPY packages/leveldb-search ./packages/leveldb-search/
-WORKDIR /app/packages/leveldb-search
+COPY packages/mongodb-search ./packages/mongodb-search/
+WORKDIR /app/packages/mongodb-search
 RUN pnpm run build
 
 EXPOSE 3000

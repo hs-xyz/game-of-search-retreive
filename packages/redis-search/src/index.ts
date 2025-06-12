@@ -1,6 +1,6 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
-import { createClient } from 'redis';
+import { createClient, SchemaFieldTypes } from 'redis';
 import { getRedisData, getBenchmarkQueries } from 'shared-utils';
 
 const app = express();
@@ -10,7 +10,7 @@ app.use(cors());
 app.use(express.json());
 
 const client = createClient({
-  url: 'redis://localhost:6379',
+  url: 'redis://redis-stack:6379',
   password: 'redis123'
 });
 
@@ -28,32 +28,52 @@ const connectRedis = async () => {
 const setupIndex = async () => {
   try {
     await client.ft.create('articles', {
-      title: { type: 'TEXT', WEIGHT: 5.0 },
-      content: { type: 'TEXT' },
-      author: { type: 'TEXT' },
-      tags: { type: 'TAG', SEPARATOR: ',' }
+      title: {
+        type: SchemaFieldTypes.TEXT
+      },
+      content: {
+        type: SchemaFieldTypes.TEXT
+      },
+      author: {
+        type: SchemaFieldTypes.TEXT
+      },
+      tags: {
+        type: SchemaFieldTypes.TAG
+      }
     }, {
       ON: 'HASH',
       PREFIX: 'article:'
     });
-  } catch (error) {
-    console.log('Index already exists or error creating:', error);
+  } catch (error: any) {
+    if (error?.message?.includes('Index already exists')) {
+      console.log('Index already exists, continuing...');
+    } else {
+      console.log('Index creation error:', error?.message || error);
+    }
   }
 };
 
 const seedData = async () => {
+  console.log('Seeding Redis with 100k articles...');
   const articles = getRedisData();
 
   for (const article of articles) {
-    await client.hSet(`article:${article.id}`, article);
+    await client.hSet(`article:${article.id}`, {
+      id: article.id,
+      title: article.title,
+      content: article.content,
+      author: article.author,
+      tags: article.tags
+    });
   }
+  console.log(`Seeded ${articles.length} articles to Redis`);
 };
 
-app.get('/health', (req, res) => {
+app.get('/health', (req: Request, res: Response) => {
   res.json({ status: 'healthy', database: 'Redis Stack' });
 });
 
-app.get('/search', async (req, res) => {
+app.get('/search', async (req: Request, res: Response) => {
   const { q, limit = 10 } = req.query;
   
   if (!q) {
@@ -70,7 +90,7 @@ app.get('/search', async (req, res) => {
     res.json({
       query: q,
       results: results.documents.map(doc => ({
-        id: doc.id,
+        id: doc.id.replace('article:', ''),
         ...doc.value
       })),
       total: results.total,
@@ -82,7 +102,7 @@ app.get('/search', async (req, res) => {
   }
 });
 
-app.get('/benchmark', async (req, res) => {
+app.get('/benchmark', async (req: Request, res: Response) => {
   const queries = getBenchmarkQueries();
   const results = [];
 
@@ -105,7 +125,7 @@ app.get('/benchmark', async (req, res) => {
   });
 });
 
-app.listen(port, () => {
+app.listen(port, async () => {
   console.log(`Redis search app running on port ${port}`);
-  connectRedis();
+  await connectRedis();
 }); 

@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { createClient } from '@clickhouse/client';
 import { getClickHouseData, getBenchmarkQueries } from 'shared-utils';
@@ -10,7 +10,7 @@ app.use(cors());
 app.use(express.json());
 
 const client = createClient({
-  host: 'http://localhost:8123',
+  host: 'http://clickhouse:8123',
   username: 'admin',
   password: 'clickhouse123',
   database: 'fulltext_db'
@@ -38,13 +38,14 @@ const initializeClickHouse = async () => {
     });
 
     await seedData();
-    console.log('ClickHouse initialized');
+    console.log('ClickHouse initialized with 100k articles');
   } catch (error) {
     console.error('ClickHouse initialization error:', error);
   }
 };
 
 const seedData = async () => {
+  console.log('Seeding ClickHouse with 100k articles...');
   const articles = getClickHouseData();
 
   await client.command({ query: 'TRUNCATE TABLE articles' });
@@ -56,13 +57,14 @@ const seedData = async () => {
       format: 'JSONEachRow'
     });
   }
+  console.log(`Seeded ${articles.length} articles to ClickHouse`);
 };
 
-app.get('/health', (req, res) => {
+app.get('/health', (req: Request, res: Response) => {
   res.json({ status: 'healthy', database: 'ClickHouse' });
 });
 
-app.get('/search', async (req, res) => {
+app.get('/search', async (req: Request, res: Response) => {
   const { q, limit = 10 } = req.query;
   
   if (!q) {
@@ -101,7 +103,7 @@ app.get('/search', async (req, res) => {
   }
 });
 
-app.get('/search-like', async (req, res) => {
+app.get('/search-like', async (req: Request, res: Response) => {
   const { q, limit = 10 } = req.query;
   
   if (!q) {
@@ -141,7 +143,7 @@ app.get('/search-like', async (req, res) => {
   }
 });
 
-app.get('/search-multiword', async (req, res) => {
+app.get('/search-multiword', async (req: Request, res: Response) => {
   const { q, limit = 10 } = req.query;
   
   if (!q) {
@@ -190,7 +192,7 @@ app.get('/search-multiword', async (req, res) => {
   }
 });
 
-app.get('/benchmark', async (req, res) => {
+app.get('/benchmark', async (req: Request, res: Response) => {
   const queries = getBenchmarkQueries();
   const results = [];
 
@@ -208,11 +210,12 @@ app.get('/benchmark', async (req, res) => {
     });
     const duration = Date.now() - start;
     
-    const rows = await result.json() as any[];
+    const rows = await result.json();
+    const rowsArray = Array.isArray(rows) ? rows : [rows];
     
     results.push({
       query,
-      resultCount: rows[0]?.count || 0,
+      resultCount: rowsArray[0]?.count || 0,
       duration: `${duration}ms`
     });
   }
@@ -224,7 +227,7 @@ app.get('/benchmark', async (req, res) => {
   });
 });
 
-app.listen(port, () => {
+app.listen(port, async () => {
   console.log(`ClickHouse search app running on port ${port}`);
-  initializeClickHouse();
+  await initializeClickHouse();
 }); 

@@ -29,6 +29,11 @@ services:
       - POSTGRES_PASSWORD=postgres123
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0
@@ -41,6 +46,11 @@ services:
       - ES_JAVA_OPTS=-Xms1g -Xmx1g
     volumes:
       - elastic_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200 || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
 
   clickhouse:
     image: clickhouse/clickhouse-server:latest
@@ -54,20 +64,87 @@ services:
     volumes:
       - clickhouse_data:/var/lib/clickhouse
 
-  leveldb-app:
+  redis-search:
     build:
-      context: ./packages/leveldb-search
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./packages/redis-search/Dockerfile
     ports:
-      - "3006:3000"
-    volumes:
-      - leveldb_data:/app/data
+      - "3001:3000"
+    environment:
+      - PORT=3000
     depends_on:
       - redis-stack
+
+  mongodb-search:
+    build:
+      context: .
+      dockerfile: ./packages/mongodb-search/Dockerfile
+    ports:
+      - "3002:3000"
+    environment:
+      - PORT=3000
+    depends_on:
       - mongodb
-      - postgresql
-      - elasticsearch
+
+  postgresql-search:
+    build:
+      context: .
+      dockerfile: ./packages/postgresql-search/Dockerfile
+    ports:
+      - "3003:3000"
+    environment:
+      - PORT=3000
+    depends_on:
+      postgresql:
+        condition: service_healthy
+
+  elasticsearch-search:
+    build:
+      context: .
+      dockerfile: ./packages/elasticsearch-search/Dockerfile
+    ports:
+      - "3004:3000"
+    environment:
+      - PORT=3000
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  clickhouse-search:
+    build:
+      context: .
+      dockerfile: ./packages/clickhouse-search/Dockerfile
+    ports:
+      - "3005:3000"
+    environment:
+      - PORT=3000
+    depends_on:
       - clickhouse
+
+  leveldb-search:
+    build:
+      context: .
+      dockerfile: ./packages/leveldb-search/Dockerfile
+    ports:
+      - "3006:3000"
+    environment:
+      - PORT=3000
+    volumes:
+      - leveldb_data:/app/data
+
+  comparison-dashboard:
+    build:
+      context: .
+      dockerfile: ./apps/comparison-dashboard/Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - redis-search
+      - mongodb-search
+      - postgresql-search
+      - elasticsearch-search
+      - clickhouse-search
+      - leveldb-search
 
 volumes:
   redis_data:

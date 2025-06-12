@@ -37,7 +37,6 @@ logs/
 
 # Database data
 packages/leveldb-search/data/
-packages/rocksdb-search/data/
 
 # Temporary files
 tmp/

@@ -1,94 +1,62 @@
-# Full Text Search Database Comparison
+# Full-Text Search Comparison
 
-A comprehensive comparison of full text search capabilities across 7 different databases using a Turborepo monorepo structure with Docker Compose.
+A comprehensive comparison of full-text search capabilities across 6 different databases:
 
-## 🗄️ Databases Compared
+1. **Redis Stack** - In-memory database with RediSearch module
+2. **MongoDB** - Document database with text indexes
+3. **PostgreSQL** - Relational database with full-text search
+4. **Elasticsearch** - Dedicated search engine
+5. **ClickHouse** - Analytical database with text search
+6. **LevelDB** - Fast key-value store with custom search
 
-1. **Redis Stack** - In-memory data structure store with search capabilities
-2. **MongoDB** - Document database with text search features
-3. **PostgreSQL** - Relational database with powerful full text search
-4. **Elasticsearch** - Dedicated search engine with advanced text analysis
-5. **ClickHouse** - Column-oriented database with text search functions
-6. **LevelDB** - Fast key-value database with custom text indexing
-7. **RocksDB** - Facebook's persistent key-value store with optimized search
-
-## 🏗️ Project Structure
+## Project Structure
 
 ```
-├── apps/
-│   └── comparison-dashboard/  # Web dashboard for comparing results
-├── packages/
-│   ├── shared-utils/          # Common seed data and utilities
+├── packages/                   # Database implementations
+│   ├── shared-utils/          # Common utilities and data
 │   ├── redis-search/          # Redis Stack implementation
-│   ├── mongodb-search/        # MongoDB implementation
+│   ├── mongodb-search/        # MongoDB implementation  
 │   ├── postgresql-search/     # PostgreSQL implementation
 │   ├── elasticsearch-search/  # Elasticsearch implementation
 │   ├── clickhouse-search/     # ClickHouse implementation
-│   ├── leveldb-search/        # LevelDB implementation
-│   └── rocksdb-search/        # RocksDB implementation
-├── docker-compose.yml         # Database services (first 5)
-├── turbo.json                 # Turborepo configuration
-└── package.json               # Root package.json
+│   └── leveldb-search/        # LevelDB implementation
+└── apps/
+    └── comparison-dashboard/   # Web interface for comparisons
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
-### Prerequisites
-
-- Node.js 22+ and pnpm 10+
-- Docker and Docker Compose
-- At least 4GB RAM available for Docker
-
-### 1. Start Database Services
-
+### Docker Compose (Recommended)
 ```bash
 docker-compose up -d
 ```
 
-### 2. Install Dependencies
-
+### Manual Development
 ```bash
 pnpm install
-```
-
-### 3. Start All Search Applications
-
-```bash
 pnpm run dev
 ```
 
-### 4. Start the Comparison Dashboard
+All services will be available at:
 
-```bash
-pnpm run start:dashboard
-```
+## Service Endpoints
 
-### 5. Open the Dashboard
+All services implement the same REST API:
 
-Visit [http://localhost:3000](http://localhost:3000) to access the comparison dashboard.
-
-## 📊 Testing Each Database
-
-Each database application runs on a different port:
-
-- **Redis Stack**: http://localhost:3001
+- **Redis**: http://localhost:3001
 - **MongoDB**: http://localhost:3002  
 - **PostgreSQL**: http://localhost:3003
 - **Elasticsearch**: http://localhost:3004
 - **ClickHouse**: http://localhost:3005
 - **LevelDB**: http://localhost:3006
-- **RocksDB**: http://localhost:3007
-- **Dashboard**: http://localhost:3000
 
-### API Endpoints
+### Standard Endpoints
 
-Each database service provides these endpoints:
-
-- `GET /health` - Health check
-- `GET /search?q=<query>&limit=<number>` - Basic text search
+- `GET /health` - Service health check
+- `GET /search?q={query}&limit={limit}` - Search articles
 - `GET /benchmark` - Performance benchmarks
 
-Additional endpoints vary by database (e.g., `/search-prefix` for RocksDB, `/search-phrase` for PostgreSQL).
+Additional endpoints vary by database (e.g., `/search-prefix` for LevelDB, `/search-phrase` for PostgreSQL).
 
 ## 🎯 Latest Technology Stack
 

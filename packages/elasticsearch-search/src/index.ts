@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { Client } from '@elastic/elasticsearch';
 import { seedData as sharedSeedData, getBenchmarkQueries } from 'shared-utils';
@@ -10,7 +10,7 @@ app.use(cors());
 app.use(express.json());
 
 const client = new Client({
-  node: 'http://localhost:9200'
+  node: 'http://elasticsearch:9200'
 });
 
 const indexName = 'articles';
@@ -45,13 +45,14 @@ const initializeElasticsearch = async () => {
     }
 
     await seedData();
-    console.log('Elasticsearch initialized');
+    console.log('Elasticsearch initialized with 100k articles');
   } catch (error) {
     console.error('Elasticsearch initialization error:', error);
   }
 };
 
 const seedData = async () => {
+  console.log('Seeding Elasticsearch with 100k articles...');
   const articles = sharedSeedData;
 
   await client.deleteByQuery({
@@ -68,13 +69,14 @@ const seedData = async () => {
   }
 
   await client.indices.refresh({ index: indexName });
+  console.log(`Seeded ${articles.length} articles to Elasticsearch`);
 };
 
-app.get('/health', (req, res) => {
+app.get('/health', (req: Request, res: Response) => {
   res.json({ status: 'healthy', database: 'Elasticsearch' });
 });
 
-app.get('/search', async (req, res) => {
+app.get('/search', async (req: Request, res: Response) => {
   const { q, limit = 10 } = req.query;
   
   if (!q) {
@@ -102,7 +104,7 @@ app.get('/search', async (req, res) => {
       results: result.hits.hits.map(hit => ({
         id: hit._id,
         score: hit._score,
-        ...hit._source
+        ...(hit._source || {})
       })),
       total: result.hits.total,
       duration: `${duration}ms`,
@@ -113,7 +115,7 @@ app.get('/search', async (req, res) => {
   }
 });
 
-app.get('/search-phrase', async (req, res) => {
+app.get('/search-phrase', async (req: Request, res: Response) => {
   const { q, limit = 10 } = req.query;
   
   if (!q) {
@@ -140,7 +142,7 @@ app.get('/search-phrase', async (req, res) => {
       results: result.hits.hits.map(hit => ({
         id: hit._id,
         score: hit._score,
-        ...hit._source
+        ...(hit._source || {})
       })),
       total: result.hits.total,
       duration: `${duration}ms`,
@@ -152,7 +154,7 @@ app.get('/search-phrase', async (req, res) => {
   }
 });
 
-app.get('/search-bool', async (req, res) => {
+app.get('/search-bool', async (req: Request, res: Response) => {
   const { q, limit = 10 } = req.query;
   
   if (!q) {
@@ -181,7 +183,7 @@ app.get('/search-bool', async (req, res) => {
       results: result.hits.hits.map(hit => ({
         id: hit._id,
         score: hit._score,
-        ...hit._source
+        ...(hit._source || {})
       })),
       total: result.hits.total,
       duration: `${duration}ms`,
@@ -193,7 +195,7 @@ app.get('/search-bool', async (req, res) => {
   }
 });
 
-app.get('/benchmark', async (req, res) => {
+app.get('/benchmark', async (req: Request, res: Response) => {
   const queries = getBenchmarkQueries();
   const results = [];
 
@@ -225,7 +227,7 @@ app.get('/benchmark', async (req, res) => {
   });
 });
 
-app.listen(port, () => {
+app.listen(port, async () => {
   console.log(`Elasticsearch search app running on port ${port}`);
-  initializeElasticsearch();
+  await initializeElasticsearch();
 }); 

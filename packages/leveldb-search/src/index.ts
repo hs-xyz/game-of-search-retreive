@@ -1,7 +1,7 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { Level } from 'level';
-import { seedData as sharedSeedData, getBenchmarkQueries } from 'shared-utils';
+import { seedData as sharedSeedData, getBenchmarkQueries, Article } from 'shared-utils';
 
 const app = express();
 const port = process.env.PORT || 3006;
@@ -9,32 +9,34 @@ const port = process.env.PORT || 3006;
 app.use(cors());
 app.use(express.json());
 
-const db = new Level('./data', { valueEncoding: 'json' });
+const db = new Level<string, Article>('./data', { valueEncoding: 'json' });
 
 const initializeLevelDB = async () => {
   try {
     await seedData();
-    console.log('LevelDB initialized');
+    console.log('LevelDB initialized with 100k articles');
   } catch (error) {
     console.error('LevelDB initialization error:', error);
   }
 };
 
 const seedData = async () => {
+  console.log('Seeding LevelDB with 100k articles...');
   const articles = sharedSeedData;
 
   for (const article of articles) {
     await db.put(`article:${article.id}`, article);
   }
+  console.log(`Seeded ${articles.length} articles to LevelDB`);
 };
 
 const search = async (query: string, limit = 10) => {
-  const results = [];
+  const results: (Article & { relevance_score: number })[] = [];
   const searchTerms = query.toLowerCase().split(' ');
   
   for await (const [key, value] of db.iterator()) {
     if (key.startsWith('article:')) {
-      const article = value as any;
+      const article = value;
       let relevanceScore = 0;
 
       for (const term of searchTerms) {
@@ -55,11 +57,11 @@ const search = async (query: string, limit = 10) => {
     .slice(0, limit);
 };
 
-app.get('/health', (req, res) => {
+app.get('/health', (req: Request, res: Response) => {
   res.json({ status: 'healthy', database: 'LevelDB' });
 });
 
-app.get('/search', async (req, res) => {
+app.get('/search', async (req: Request, res: Response) => {
   const { q, limit = 10 } = req.query;
   
   if (!q) {
@@ -83,7 +85,7 @@ app.get('/search', async (req, res) => {
   }
 });
 
-app.get('/benchmark', async (req, res) => {
+app.get('/benchmark', async (req: Request, res: Response) => {
   const queries = getBenchmarkQueries();
   const results = [];
 
@@ -106,7 +108,7 @@ app.get('/benchmark', async (req, res) => {
   });
 });
 
-app.listen(port, () => {
+app.listen(port, async () => {
   console.log(`LevelDB search app running on port ${port}`);
-  initializeLevelDB();
+  await initializeLevelDB();
 }); 

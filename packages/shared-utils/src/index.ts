@@ -10,43 +10,101 @@ export interface RedisArticle extends Omit<Article, 'tags'> {
   tags: string;
 }
 
-export const seedData: Article[] = [
-  {
-    id: '1',
-    title: 'Introduction to Machine Learning',
-    content: 'Machine learning is a subset of artificial intelligence that focuses on algorithms.',
-    author: 'John Doe',
-    tags: ['ml', 'ai', 'tech']
-  },
-  {
-    id: '2',
-    title: 'Database Performance Optimization',
-    content: 'Optimizing database queries and indexing strategies for better performance.',
-    author: 'Jane Smith',
-    tags: ['database', 'performance', 'sql']
-  },
-  {
-    id: '3',
-    title: 'Full Text Search Techniques',
-    content: 'Exploring various full text search implementations across different databases.',
-    author: 'Bob Johnson',
-    tags: ['search', 'database', 'indexing']
-  },
-  {
-    id: '4',
-    title: 'Advanced Data Structures',
-    content: 'Understanding complex data structures and their applications in modern software development.',
-    author: 'Alice Chen',
-    tags: ['algorithms', 'data-structures', 'programming']
-  },
-  {
-    id: '5',
-    title: 'Cloud Computing Fundamentals',
-    content: 'An introduction to cloud computing concepts, services, and deployment models.',
-    author: 'Robert Wilson',
-    tags: ['cloud', 'aws', 'infrastructure']
-  }
+const titleTemplates = [
+  'Introduction to',
+  'Advanced',
+  'Understanding',
+  'Mastering',
+  'Deep Dive into',
+  'Complete Guide to',
+  'Best Practices for',
+  'Fundamentals of',
+  'Modern',
+  'Building'
 ];
+
+const subjects = [
+  'Machine Learning',
+  'Database Design',
+  'Web Development',
+  'Cloud Computing',
+  'Data Structures',
+  'Algorithms',
+  'Software Architecture',
+  'DevOps',
+  'Artificial Intelligence',
+  'Cybersecurity',
+  'Mobile Development',
+  'Frontend Frameworks',
+  'Backend Systems',
+  'Microservices',
+  'Performance Optimization'
+];
+
+const contentTemplates = [
+  'Exploring the fundamental concepts and practical applications in modern software development.',
+  'A comprehensive overview of techniques and methodologies used by industry professionals.',
+  'Understanding core principles and implementing effective solutions for complex problems.',
+  'Detailed analysis of best practices and optimization strategies for enterprise applications.',
+  'Examining advanced patterns and architectural decisions in scalable system design.',
+  'Practical implementation guide with real-world examples and case studies.',
+  'Strategic approaches to solving common challenges in distributed systems.',
+  'In-depth exploration of tools and frameworks for efficient development workflows.'
+];
+
+const authors = [
+  'John Doe',
+  'Jane Smith',
+  'Bob Johnson',
+  'Alice Chen',
+  'Robert Wilson',
+  'Sarah Davis',
+  'Michael Brown',
+  'Emily Taylor',
+  'David Martinez',
+  'Lisa Anderson'
+];
+
+const tagGroups = [
+  ['ml', 'ai', 'tech'],
+  ['database', 'performance', 'sql'],
+  ['search', 'indexing', 'optimization'],
+  ['algorithms', 'data-structures', 'programming'],
+  ['cloud', 'aws', 'infrastructure'],
+  ['web', 'frontend', 'javascript'],
+  ['backend', 'api', 'server'],
+  ['devops', 'docker', 'kubernetes'],
+  ['security', 'encryption', 'auth'],
+  ['mobile', 'ios', 'android']
+];
+
+const seededRandom = (seed: number) => {
+  let x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+};
+
+const generateArticle = (index: number): Article => {
+  const seed = index + 1;
+  const titleTemplate = titleTemplates[Math.floor(seededRandom(seed * 2) * titleTemplates.length)];
+  const subject = subjects[Math.floor(seededRandom(seed * 3) * subjects.length)];
+  const content = contentTemplates[Math.floor(seededRandom(seed * 4) * contentTemplates.length)];
+  const author = authors[Math.floor(seededRandom(seed * 5) * authors.length)];
+  const tags = tagGroups[Math.floor(seededRandom(seed * 6) * tagGroups.length)];
+
+  return {
+    id: (index + 1).toString(),
+    title: `${titleTemplate} ${subject}`,
+    content,
+    author,
+    tags
+  };
+};
+
+export const generateSeedData = (count: number = 100000): Article[] => {
+  return Array.from({ length: count }, (_, index) => generateArticle(index));
+};
+
+export const seedData = generateSeedData();
 
 export const getRedisData = (): RedisArticle[] => {
   return seedData.map(article => ({
@@ -68,10 +126,14 @@ export const getClickHouseData = () => {
 export const getBenchmarkQueries = (): string[] => [
   'machine learning',
   'database',
-  'search',
-  'performance',
+  'web development',
   'cloud computing',
-  'algorithms'
+  'performance',
+  'algorithms',
+  'artificial intelligence',
+  'cybersecurity',
+  'mobile development',
+  'microservices'
 ];
 
 export const getRandomQuery = (): string => {

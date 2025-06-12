@@ -1,6 +1,6 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
-import { MongoClient, Db, Collection } from 'mongodb';
+import { MongoClient } from 'mongodb';
 import { seedData as sharedSeedData, getBenchmarkQueries } from 'shared-utils';
 
 const app = express();
@@ -9,53 +9,47 @@ const port = process.env.PORT || 3002;
 app.use(cors());
 app.use(express.json());
 
-const uri = 'mongodb://admin:mongo123@localhost:27017';
-let db: Db;
-let articlesCollection: Collection;
+const uri = 'mongodb://admin:mongo123@mongodb:27017/fulltext_db?authSource=admin';
+const client = new MongoClient(uri);
+
+let db: any;
+let collection: any;
 
 const connectMongoDB = async () => {
   try {
-    const client = new MongoClient(uri);
     await client.connect();
     console.log('Connected to MongoDB');
     
     db = client.db('fulltext_db');
-    articlesCollection = db.collection('articles');
+    collection = db.collection('articles');
     
-    await setupIndexes();
+    await collection.createIndex({
+      title: 'text',
+      content: 'text',
+      author: 'text'
+    });
+    console.log('Text index created');
+    
     await seedData();
   } catch (error) {
     console.error('MongoDB connection error:', error);
   }
 };
 
-const setupIndexes = async () => {
-  try {
-    await articlesCollection.createIndex({ 
-      title: 'text', 
-      content: 'text', 
-      author: 'text' 
-    }, {
-      weights: { title: 10, content: 5, author: 1 }
-    });
-    console.log('Text index created');
-  } catch (error) {
-    console.log('Index already exists or error creating:', error);
-  }
-};
-
 const seedData = async () => {
+  console.log('Seeding MongoDB with 100k articles...');
   const articles = sharedSeedData;
 
-  await articlesCollection.deleteMany({});
-  await articlesCollection.insertMany(articles);
+  await collection.deleteMany({});
+  await collection.insertMany(articles);
+  console.log(`Seeded ${articles.length} articles to MongoDB`);
 };
 
-app.get('/health', (req, res) => {
+app.get('/health', (req: Request, res: Response) => {
   res.json({ status: 'healthy', database: 'MongoDB' });
 });
 
-app.get('/search', async (req, res) => {
+app.get('/search', async (req: Request, res: Response) => {
   const { q, limit = 10 } = req.query;
   
   if (!q) {
@@ -64,12 +58,14 @@ app.get('/search', async (req, res) => {
 
   try {
     const start = Date.now();
-    const results = await articlesCollection
-      .find({ $text: { $search: q as string } })
-      .project({ score: { $meta: 'textScore' } })
-      .sort({ score: { $meta: 'textScore' } })
-      .limit(Number(limit))
-      .toArray();
+    const results = await collection.find(
+      { $text: { $search: q as string } },
+      { score: { $meta: 'textScore' } }
+    )
+    .sort({ score: { $meta: 'textScore' } })
+    .limit(Number(limit))
+    .toArray();
+    
     const duration = Date.now() - start;
 
     res.json({
@@ -84,7 +80,7 @@ app.get('/search', async (req, res) => {
   }
 });
 
-app.get('/search-regex', async (req, res) => {
+app.get('/search-regex', async (req: Request, res: Response) => {
   const { q, limit = 10 } = req.query;
   
   if (!q) {
@@ -94,7 +90,7 @@ app.get('/search-regex', async (req, res) => {
   try {
     const start = Date.now();
     const regex = new RegExp(q as string, 'i');
-    const results = await articlesCollection
+    const results = await collection
       .find({
         $or: [
           { title: regex },
@@ -119,20 +115,18 @@ app.get('/search-regex', async (req, res) => {
   }
 });
 
-app.get('/benchmark', async (req, res) => {
+app.get('/benchmark', async (req: Request, res: Response) => {
   const queries = getBenchmarkQueries();
   const results = [];
 
   for (const query of queries) {
     const start = Date.now();
-    const result = await articlesCollection
-      .find({ $text: { $search: query } })
-      .toArray();
+    const searchResults = await collection.find({ $text: { $search: query } }).toArray();
     const duration = Date.now() - start;
     
     results.push({
       query,
-      resultCount: result.length,
+      resultCount: searchResults.length,
       duration: `${duration}ms`
     });
   }
@@ -144,7 +138,7 @@ app.get('/benchmark', async (req, res) => {
   });
 });
 
-app.listen(port, () => {
+app.listen(port, async () => {
   console.log(`MongoDB search app running on port ${port}`);
-  connectMongoDB();
+  await connectMongoDB();
 }); 
