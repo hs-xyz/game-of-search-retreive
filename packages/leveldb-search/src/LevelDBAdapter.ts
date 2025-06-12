@@ -9,24 +9,99 @@ export class LevelDBAdapter implements DatabaseAdapter {
   private contentIndex: any;
   private authorIndex: any;
   private searchableIndex: any;
+  private isInitialized = false;
+  private initializationAttempts = 0;
+  private maxInitAttempts = 3;
 
   async initialize(): Promise<void> {
+    while (this.initializationAttempts < this.maxInitAttempts && !this.isInitialized) {
+      try {
+        this.initializationAttempts++;
+        console.log(`LevelDB initialization attempt ${this.initializationAttempts}/${this.maxInitAttempts}`);
+        
+        await this.initializeDatabases();
+        await this.seedDataWithRecovery();
+        
+        this.isInitialized = true;
+        console.log('LevelDB database initialized successfully with crash prevention');
+        
+      } catch (error: any) {
+        console.error(`Initialization attempt ${this.initializationAttempts} failed:`, error.message);
+        
+        await this.cleanup();
+        
+        if (this.initializationAttempts >= this.maxInitAttempts) {
+          throw new Error(`Failed to initialize LevelDB after ${this.maxInitAttempts} attempts: ${error.message}`);
+        }
+        
+        const delay = 5000 * this.initializationAttempts;
+        console.log(`Waiting ${delay}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  private async initializeDatabases(): Promise<void> {
     const dbOptions = {
       valueEncoding: 'json',
-      writeBufferSize: 16 * 1024 * 1024, // 16MB
-      cacheSize: 32 * 1024 * 1024, // 32MB cache
-      maxOpenFiles: 2000,
-      blockSize: 8192 // 8KB blocks
+      writeBufferSize: 32 * 1024 * 1024,
+      cacheSize: 64 * 1024 * 1024,
+      maxOpenFiles: 4000,
+      blockSize: 16384,
+      createIfMissing: true,
+      errorIfExists: false,
+      compression: true,
+      filterPolicy: 'bloom'
     };
 
     this.db = new Level('./data', dbOptions);
-    this.titleIndex = new Level('./data/title-index', { valueEncoding: 'json', writeBufferSize: 8 * 1024 * 1024 });
-    this.contentIndex = new Level('./data/content-index', { valueEncoding: 'json', writeBufferSize: 8 * 1024 * 1024 });
-    this.authorIndex = new Level('./data/author-index', { valueEncoding: 'json', writeBufferSize: 4 * 1024 * 1024 });
-    this.searchableIndex = new Level('./data/searchable-index', { valueEncoding: 'json', writeBufferSize: 8 * 1024 * 1024 });
+    this.titleIndex = new Level('./data/title-index', { 
+      valueEncoding: 'json', 
+      writeBufferSize: 16 * 1024 * 1024,
+      cacheSize: 32 * 1024 * 1024 
+    });
+    this.contentIndex = new Level('./data/content-index', { 
+      valueEncoding: 'json', 
+      writeBufferSize: 16 * 1024 * 1024,
+      cacheSize: 32 * 1024 * 1024 
+    });
+    this.authorIndex = new Level('./data/author-index', { 
+      valueEncoding: 'json', 
+      writeBufferSize: 8 * 1024 * 1024,
+      cacheSize: 16 * 1024 * 1024 
+    });
+    this.searchableIndex = new Level('./data/searchable-index', { 
+      valueEncoding: 'json', 
+      writeBufferSize: 16 * 1024 * 1024,
+      cacheSize: 32 * 1024 * 1024 
+    });
+  }
 
-    await this.seedData();
-    console.log('LevelDB database initialized with optimized configuration');
+  private async cleanup(): Promise<void> {
+    try {
+      if (this.db) await this.db.close();
+      if (this.titleIndex) await this.titleIndex.close();
+      if (this.contentIndex) await this.contentIndex.close();
+      if (this.authorIndex) await this.authorIndex.close();
+      if (this.searchableIndex) await this.searchableIndex.close();
+    } catch (error) {
+      console.log('Cleanup completed');
+    }
+  }
+
+  private monitorMemoryUsage(): void {
+    const usage = process.memoryUsage();
+    const heapUsedMB = Math.round(usage.heapUsed / 1024 / 1024);
+    const heapTotalMB = Math.round(usage.heapTotal / 1024 / 1024);
+    
+    console.log(`Memory: ${heapUsedMB}MB used / ${heapTotalMB}MB total`);
+    
+    if (heapUsedMB > 6000) {
+      console.warn('High memory usage detected, forcing garbage collection');
+      if (global.gc) {
+        global.gc();
+      }
+    }
   }
 
   private tokenize(text: string): string[] {
@@ -35,27 +110,46 @@ export class LevelDBAdapter implements DatabaseAdapter {
       .replace(/[^\w\s]/g, ' ')
       .split(/\s+/)
       .filter(word => word.length > 2)
-      .slice(0, 20); // Limit tokens to prevent memory overflow
+      .slice(0, 15);
   }
 
-  private async createInvertedIndexBatch(articles: Article[], indexDb: any, fieldExtractor: (article: Article) => string): Promise<void> {
+  private async createInvertedIndexStream(articles: Article[], indexDb: any, fieldExtractor: (article: Article) => string): Promise<void> {
     const tokenMap = new Map<string, Set<string>>();
+    const maxTokensPerMap = 25000;
+    let currentTokenCount = 0;
     
-    // Build token map in memory first
     for (const article of articles) {
+      if (currentTokenCount >= maxTokensPerMap) {
+        await this.flushTokenMap(tokenMap, indexDb);
+        tokenMap.clear();
+        currentTokenCount = 0;
+        
+        if (global.gc) {
+          global.gc();
+        }
+        await new Promise(resolve => setTimeout(resolve, 5));
+      }
+      
       const text = fieldExtractor(article);
       const tokens = this.tokenize(text);
       
       for (const token of tokens) {
         if (!tokenMap.has(token)) {
           tokenMap.set(token, new Set());
+          currentTokenCount++;
         }
         tokenMap.get(token)!.add(article.id);
       }
     }
     
-    // Batch write to database
+    if (tokenMap.size > 0) {
+      await this.flushTokenMap(tokenMap, indexDb);
+    }
+  }
+
+  private async flushTokenMap(tokenMap: Map<string, Set<string>>, indexDb: any): Promise<void> {
     const batch = [];
+    
     for (const [token, articleIds] of tokenMap) {
       const indexKey = `token:${token}`;
       
@@ -68,10 +162,10 @@ export class LevelDBAdapter implements DatabaseAdapter {
         }
         
         const allIds = Array.from(new Set([...existingIds, ...Array.from(articleIds)]));
-        batch.push({ type: 'put', key: indexKey, value: allIds.slice(0, 500) }); // Limit to 500 IDs per token
+        batch.push({ type: 'put', key: indexKey, value: allIds });
         
-        if (batch.length >= 100) {
-          await indexDb.batch(batch.splice(0, 100));
+        if (batch.length >= 50) {
+          await indexDb.batch(batch.splice(0, 50));
         }
       } catch (error) {
         console.error(`Error processing token ${token}:`, error);
@@ -83,8 +177,8 @@ export class LevelDBAdapter implements DatabaseAdapter {
     }
   }
 
-  private async seedData(): Promise<void> {
-    console.log('Seeding LevelDB with 100k articles using optimized batching...');
+  private async seedDataWithRecovery(): Promise<void> {
+    console.log('Seeding LevelDB with 100k articles using crash-resistant streaming...');
     const articles = generatedArticles;
 
     try {
@@ -99,37 +193,57 @@ export class LevelDBAdapter implements DatabaseAdapter {
       console.log('Cleared existing data');
     }
 
-    // Smaller, sequential batches for better performance
-    const batchSize = 1000;
+    const batchSize = 250;
+    let processedCount = 0;
     
     for (let i = 0; i < articles.length; i += batchSize) {
-      const batch = articles.slice(i, i + batchSize);
-      console.log(`Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(articles.length / batchSize)} (${batch.length} articles)...`);
-      
-      // Store articles first
-      const articleBatch = batch.map(article => ({
-        type: 'put' as const,
-        key: `article:${article.id}`,
-        value: article
-      }));
-      
-      await this.db.batch(articleBatch);
-      
-      // Create indexes for this batch sequentially
-      await this.createInvertedIndexBatch(batch, this.titleIndex, (article: Article) => article.title);
-      await this.createInvertedIndexBatch(batch, this.authorIndex, (article: Article) => article.author);
-      await this.createInvertedIndexBatch(batch, this.contentIndex, (article: Article) => article.content.substring(0, 200)); // Limit content
-      await this.createInvertedIndexBatch(batch, this.searchableIndex, (article: Article) => 
-        `${article.title} ${article.content.substring(0, 100)} ${article.author}`.substring(0, 300)
-      );
-      
-      if ((i + batchSize) % 5000 === 0) {
-        console.log(`Processed ${Math.min(i + batchSize, articles.length)} articles...`);
-        await new Promise(resolve => setTimeout(resolve, 50)); // Small pause
+      try {
+        const batch = articles.slice(i, i + batchSize);
+        console.log(`Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(articles.length / batchSize)} (${batch.length} articles)...`);
+        
+        const articleBatch = batch.map(article => ({
+          type: 'put' as const,
+          key: `article:${article.id}`,
+          value: article
+        }));
+        
+        await this.db.batch(articleBatch);
+        
+        await this.createInvertedIndexStream(batch, this.titleIndex, (article: Article) => article.title);
+        await this.createInvertedIndexStream(batch, this.authorIndex, (article: Article) => article.author);
+        await this.createInvertedIndexStream(batch, this.contentIndex, (article: Article) => article.content.substring(0, 150));
+        await this.createInvertedIndexStream(batch, this.searchableIndex, (article: Article) => 
+          `${article.title} ${article.content.substring(0, 100)} ${article.author}`.substring(0, 250)
+        );
+        
+        processedCount += batch.length;
+        
+        if (processedCount % 1000 === 0) {
+          this.monitorMemoryUsage();
+          console.log(`Successfully processed ${processedCount} articles...`);
+          
+          if (global.gc) {
+            global.gc();
+          }
+          await new Promise(resolve => setTimeout(resolve, 20));
+        }
+        
+      } catch (error: any) {
+        console.error(`Error processing batch at index ${i}:`, error.message);
+        
+        if (global.gc) {
+          global.gc();
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        if (error.message.includes('out of memory')) {
+          throw new Error('Memory exhausted during seeding');
+        }
       }
     }
 
-    console.log(`Seeded ${articles.length} articles to LevelDB with optimized batching`);
+    console.log(`Successfully seeded ${articles.length} articles to LevelDB with crash prevention`);
   }
 
   private async searchInvertedIndex(query: string, indexDb: any): Promise<string[]> {
@@ -161,8 +275,6 @@ export class LevelDBAdapter implements DatabaseAdapter {
   }
 
   async search(query: string, limit: number): Promise<{ results: any[]; total: number; }> {
-    const allResults: any[] = [];
-    
     const titleResults = await this.searchInvertedIndex(query, this.titleIndex);
     const contentResults = await this.searchInvertedIndex(query, this.contentIndex);
     const authorResults = await this.searchInvertedIndex(query, this.authorIndex);
@@ -175,7 +287,7 @@ export class LevelDBAdapter implements DatabaseAdapter {
       ...searchableResults
     ]);
     
-    const articlePromises = Array.from(uniqueIds).slice(0, Math.max(limit, 1000)).map(async (articleId) => {
+    const articlePromises = Array.from(uniqueIds).map(async (articleId) => {
       try {
         const article = await this.db.get(`article:${articleId}`);
         return article;

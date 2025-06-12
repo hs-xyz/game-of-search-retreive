@@ -104,83 +104,65 @@ export class ElasticsearchAdapter implements DatabaseAdapter {
     console.log(`Seeded ${articles.length} articles to Elasticsearch with enhanced features`);
   }
 
-  async search(query: string, limit: number): Promise<{ results: any[]; total: number }> {
+  async search(query: string, limit: number): Promise<{ results: any[]; total: number; }> {
     const searchBody = {
       query: {
         bool: {
           should: [
             {
-              multi_match: {
-                query,
-                fields: ['title^3', 'content', 'author^2'],
-                type: 'phrase' as const,
-                boost: 10
+              match: {
+                title: {
+                  query: query,
+                  operator: 'and' as const
+                }
               }
             },
             {
-              multi_match: {
-                query,
-                fields: ['title^3', 'content', 'author^2', 'searchable_text'],
-                type: 'best_fields' as const,
-                boost: 5,
-                fuzziness: 'AUTO'
+              match: {
+                content: {
+                  query: query,
+                  operator: 'and' as const
+                }
               }
             },
             {
-              multi_match: {
-                query,
-                fields: ['title^3', 'content', 'author^2'],
-                type: 'cross_fields' as const,
-                boost: 3
+              match: {
+                author: {
+                  query: query,
+                  operator: 'and' as const
+                }
               }
             },
             {
-              multi_match: {
-                query,
-                fields: ['title^3', 'content', 'author^2', 'searchable_text'],
-                type: 'most_fields' as const,
-                boost: 1
-              }
-            },
-            {
-              terms: {
-                tags: query.toLowerCase().split(/\s+/),
-                boost: 2
+              match: {
+                searchable_text: {
+                  query: query,
+                  operator: 'and' as const
+                }
               }
             }
           ],
           minimum_should_match: 1
         }
       },
-      highlight: {
-        fields: {
-          title: {},
-          content: { fragment_size: 150, number_of_fragments: 1 }
-        }
-      },
       size: limit,
-      sort: [
-        '_score',
-        { 'id': 'asc' }
-      ]
+      track_total_hits: true,
+      _source: ['id', 'title', 'content', 'author', 'tags']
     };
 
     const response = await this.client.search({
-      index: this.indexName,
+      index: 'articles',
       body: searchBody
     });
 
-    const results = (response.hits?.hits || []).map((hit: any) => ({
-      ...hit._source,
-      _score: hit._score,
-      highlight: hit.highlight
-    }));
-
-    const total = (response.hits?.total as any)?.value || response.hits?.total || 0;
+    const hits = response.hits.hits.map((hit: any) => hit._source);
+    const total = typeof response.hits.total === 'object' 
+      ? response.hits.total.value || 0
+      : response.hits.total || 0;
 
     return {
-      results,
-      total
+      results: hits,
+      total: total
     };
   }
 

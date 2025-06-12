@@ -89,25 +89,26 @@ export class ClickHouseAdapter implements DatabaseAdapter {
   }
 
   async search(query: string, limit: number): Promise<{ results: any[]; total: number; }> {
-    const searchPatterns = [query.toLowerCase()];
+    const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const strictWordBoundaryPattern = `(?:^|\\s)${escapedQuery}(?:\\s|$)`;
     
     const searchQuery = `
       SELECT *
       FROM articles
-      WHERE multiSearchAnyCaseInsensitive(searchable_text, ${JSON.stringify(searchPatterns)})
-         OR multiSearchAnyCaseInsensitive(title, ${JSON.stringify(searchPatterns)})
-         OR multiSearchAnyCaseInsensitive(content, ${JSON.stringify(searchPatterns)})
-         OR multiSearchAnyCaseInsensitive(author, ${JSON.stringify(searchPatterns)})
+      WHERE match(lower(searchable_text), lower('${strictWordBoundaryPattern}'))
+         OR match(lower(title), lower('${strictWordBoundaryPattern}'))
+         OR match(lower(content), lower('${strictWordBoundaryPattern}'))
+         OR match(lower(author), lower('${strictWordBoundaryPattern}'))
       LIMIT ${limit}
     `;
     
     const countQuery = `
       SELECT count() as total
       FROM articles
-      WHERE multiSearchAnyCaseInsensitive(searchable_text, ${JSON.stringify(searchPatterns)})
-         OR multiSearchAnyCaseInsensitive(title, ${JSON.stringify(searchPatterns)})
-         OR multiSearchAnyCaseInsensitive(content, ${JSON.stringify(searchPatterns)})
-         OR multiSearchAnyCaseInsensitive(author, ${JSON.stringify(searchPatterns)})
+      WHERE match(lower(searchable_text), lower('${strictWordBoundaryPattern}'))
+         OR match(lower(title), lower('${strictWordBoundaryPattern}'))
+         OR match(lower(content), lower('${strictWordBoundaryPattern}'))
+         OR match(lower(author), lower('${strictWordBoundaryPattern}'))
     `;
 
     const [results, countResult] = await Promise.all([

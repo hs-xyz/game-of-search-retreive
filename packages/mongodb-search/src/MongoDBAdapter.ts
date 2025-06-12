@@ -64,14 +64,14 @@ export class MongoDBAdapter implements DatabaseAdapter {
 
   async search(query: string, limit: number): Promise<{ results: any[]; total: number; }> {
     const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const regex = new RegExp(escapedQuery, 'i');
+    const wordBoundaryRegex = new RegExp(`\\b${escapedQuery}\\b`, 'i');
     
     const searchCondition = {
       $or: [
-        { title: { $regex: regex } },
-        { content: { $regex: regex } },
-        { author: { $regex: regex } },
-        { searchable_text: { $regex: regex } }
+        { title: { $regex: wordBoundaryRegex } },
+        { content: { $regex: wordBoundaryRegex } },
+        { author: { $regex: wordBoundaryRegex } },
+        { searchable_text: { $regex: wordBoundaryRegex } }
       ]
     };
 
