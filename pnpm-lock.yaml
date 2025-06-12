@@ -61,235 +61,146 @@ importers:
   packages/clickhouse-search:
     dependencies:
       '@clickhouse/client':
-        specifier: ^1.9.0
-        version: 1.11.2
-      cors:
-        specifier: ^2.8.5
-        version: 2.8.5
-      express:
-        specifier: ^4.21.2
-        version: 4.21.2
+        specifier: ^0.2.5
+        version: 0.2.10
+      search-framework:
+        specifier: workspace:*
+        version: link:../search-framework
       shared-utils:
         specifier: workspace:*
         version: link:../shared-utils
     devDependencies:
-      '@types/cors':
-        specifier: ^2.8.17
-        version: 2.8.19
-      '@types/express':
-        specifier: ^4.17.21
-        version: 4.17.23
       '@types/node':
-        specifier: ^22.10.5
-        version: 22.15.31
-      '@typescript-eslint/eslint-plugin':
-        specifier: ^8.18.2
-        version: 8.34.0(@typescript-eslint/parser@8.34.0(eslint@9.28.0)(typescript@5.8.3))(eslint@9.28.0)(typescript@5.8.3)
-      '@typescript-eslint/parser':
-        specifier: ^8.18.2
-        version: 8.34.0(eslint@9.28.0)(typescript@5.8.3)
-      eslint:
-        specifier: ^9.17.0
-        version: 9.28.0
-      tsx:
-        specifier: ^4.19.2
-        version: 4.20.2
+        specifier: ^20.0.0
+        version: 20.19.0
+      ts-node:
+        specifier: ^10.9.1
+        version: 10.9.2(@types/node@20.19.0)(typescript@5.8.3)
       typescript:
-        specifier: ^5.7.3
+        specifier: ^5.3.3
         version: 5.8.3
-      vitest:
-        specifier: ^2.1.8
-        version: 2.1.9(@types/node@22.15.31)
 
   packages/elasticsearch-search:
     dependencies:
       '@elastic/elasticsearch':
-        specifier: ^8.17.0
+        specifier: ^8.12.0
         version: 8.18.2
-      cors:
-        specifier: ^2.8.5
-        version: 2.8.5
-      express:
-        specifier: ^4.21.2
-        version: 4.21.2
+      search-framework:
+        specifier: workspace:*
+        version: link:../search-framework
       shared-utils:
         specifier: workspace:*
         version: link:../shared-utils
     devDependencies:
-      '@types/cors':
-        specifier: ^2.8.17
-        version: 2.8.19
-      '@types/express':
-        specifier: ^4.17.21
-        version: 4.17.23
       '@types/node':
-        specifier: ^22.10.5
-        version: 22.15.31
-      '@typescript-eslint/eslint-plugin':
-        specifier: ^8.18.2
-        version: 8.34.0(@typescript-eslint/parser@8.34.0(eslint@9.28.0)(typescript@5.8.3))(eslint@9.28.0)(typescript@5.8.3)
-      '@typescript-eslint/parser':
-        specifier: ^8.18.2
-        version: 8.34.0(eslint@9.28.0)(typescript@5.8.3)
-      eslint:
-        specifier: ^9.17.0
-        version: 9.28.0
-      tsx:
-        specifier: ^4.19.2
-        version: 4.20.2
+        specifier: ^20.0.0
+        version: 20.19.0
+      ts-node:
+        specifier: ^10.9.1
+        version: 10.9.2(@types/node@20.19.0)(typescript@5.8.3)
       typescript:
-        specifier: ^5.7.3
+        specifier: ^5.3.3
         version: 5.8.3
-      vitest:
-        specifier: ^2.1.8
-        version: 2.1.9(@types/node@22.15.31)
 
   packages/leveldb-search:
     dependencies:
-      cors:
-        specifier: ^2.8.5
-        version: 2.8.5
-      express:
-        specifier: ^4.21.2
-        version: 4.21.2
       level:
-        specifier: ^8.0.1
+        specifier: ^8.0.0
         version: 8.0.1
+      search-framework:
+        specifier: workspace:*
+        version: link:../search-framework
       shared-utils:
         specifier: workspace:*
         version: link:../shared-utils
     devDependencies:
-      '@types/cors':
-        specifier: ^2.8.17
-        version: 2.8.19
-      '@types/express':
-        specifier: ^4.17.21
-        version: 4.17.23
       '@types/node':
-        specifier: ^22.10.5
-        version: 22.15.31
-      '@typescript-eslint/eslint-plugin':
-        specifier: ^8.18.2
-        version: 8.34.0(@typescript-eslint/parser@8.34.0(eslint@9.28.0)(typescript@5.8.3))(eslint@9.28.0)(typescript@5.8.3)
-      '@typescript-eslint/parser':
-        specifier: ^8.18.2
-        version: 8.34.0(eslint@9.28.0)(typescript@5.8.3)
-      eslint:
-        specifier: ^9.17.0
-        version: 9.28.0
-      tsx:
-        specifier: ^4.19.2
-        version: 4.20.2
+        specifier: ^20.0.0
+        version: 20.19.0
+      ts-node:
+        specifier: ^10.9.1
+        version: 10.9.2(@types/node@20.19.0)(typescript@5.8.3)
       typescript:
-        specifier: ^5.7.3
+        specifier: ^5.3.3
         version: 5.8.3
-      vitest:
-        specifier: ^2.1.8
-        version: 2.1.9(@types/node@22.15.31)
 
   packages/mongodb-search:
     dependencies:
-      cors:
-        specifier: ^2.8.5
-        version: 2.8.5
-      express:
-        specifier: ^4.21.2
-        version: 4.21.2
       mongodb:
-        specifier: ^6.12.0
+        specifier: ^6.3.0
         version: 6.17.0(socks@2.8.5)
+      search-framework:
+        specifier: workspace:*
+        version: link:../search-framework
       shared-utils:
         specifier: workspace:*
         version: link:../shared-utils
     devDependencies:
-      '@types/cors':
-        specifier: ^2.8.17
-        version: 2.8.19
-      '@types/express':
-        specifier: ^4.17.21
-        version: 4.17.23
       '@types/node':
-        specifier: ^22.10.5
-        version: 22.15.31
-      '@typescript-eslint/eslint-plugin':
-        specifier: ^8.18.2
-        version: 8.34.0(@typescript-eslint/parser@8.34.0(eslint@9.28.0)(typescript@5.8.3))(eslint@9.28.0)(typescript@5.8.3)
-      '@typescript-eslint/parser':
-        specifier: ^8.18.2
-        version: 8.34.0(eslint@9.28.0)(typescript@5.8.3)
-      eslint:
-        specifier: ^9.17.0
-        version: 9.28.0
-      tsx:
-        specifier: ^4.19.2
-        version: 4.20.2
+        specifier: ^20.0.0
+        version: 20.19.0
+      ts-node:
+        specifier: ^10.9.1
+        version: 10.9.2(@types/node@20.19.0)(typescript@5.8.3)
       typescript:
-        specifier: ^5.7.3
+        specifier: ^5.3.3
         version: 5.8.3
-      vitest:
-        specifier: ^2.1.8
-        version: 2.1.9(@types/node@22.15.31)
 
   packages/postgresql-search:
     dependencies:
-      cors:
-        specifier: ^2.8.5
-        version: 2.8.5
-      express:
-        specifier: ^4.21.2
-        version: 4.21.2
       pg:
-        specifier: ^8.13.1
+        specifier: ^8.11.3
         version: 8.16.0
+      search-framework:
+        specifier: workspace:*
+        version: link:../search-framework
       shared-utils:
         specifier: workspace:*
         version: link:../shared-utils
     devDependencies:
-      '@types/cors':
-        specifier: ^2.8.17
-        version: 2.8.19
-      '@types/express':
-        specifier: ^4.17.21
-        version: 4.17.23
       '@types/node':
-        specifier: ^22.10.5
-        version: 22.15.31
+        specifier: ^20.0.0
+        version: 20.19.0
       '@types/pg':
-        specifier: ^8.11.10
+        specifier: ^8.10.9
         version: 8.15.4
-      '@typescript-eslint/eslint-plugin':
-        specifier: ^8.18.2
-        version: 8.34.0(@typescript-eslint/parser@8.34.0(eslint@9.28.0)(typescript@5.8.3))(eslint@9.28.0)(typescript@5.8.3)
-      '@typescript-eslint/parser':
-        specifier: ^8.18.2
-        version: 8.34.0(eslint@9.28.0)(typescript@5.8.3)
-      eslint:
-        specifier: ^9.17.0
-        version: 9.28.0
-      tsx:
-        specifier: ^4.19.2
-        version: 4.20.2
+      ts-node:
+        specifier: ^10.9.1
+        version: 10.9.2(@types/node@20.19.0)(typescript@5.8.3)
       typescript:
-        specifier: ^5.7.3
+        specifier: ^5.3.3
         version: 5.8.3
-      vitest:
-        specifier: ^2.1.8
-        version: 2.1.9(@types/node@22.15.31)
 
   packages/redis-search:
+    dependencies:
+      redis:
+        specifier: ^4.6.12
+        version: 4.7.1
+      search-framework:
+        specifier: workspace:*
+        version: link:../search-framework
+      shared-utils:
+        specifier: workspace:*
+        version: link:../shared-utils
+    devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.0
+      ts-node:
+        specifier: ^10.9.1
+        version: 10.9.2(@types/node@20.19.0)(typescript@5.8.3)
+      typescript:
+        specifier: ^5.3.3
+        version: 5.8.3
+
+  packages/search-framework:
     dependencies:
       cors:
         specifier: ^2.8.5
         version: 2.8.5
       express:
-        specifier: ^4.21.2
+        specifier: ^4.19.2
         version: 4.21.2
-      redis:
-        specifier: ^4.7.0
-        version: 4.7.1
-      shared-utils:
-        specifier: workspace:*
-        version: link:../shared-utils
     devDependencies:
       '@types/cors':
         specifier: ^2.8.17
@@ -298,29 +209,11 @@ importers:
         specifier: ^4.17.21
         version: 4.17.23
       '@types/node':
-        specifier: ^22.10.5
-        version: 22.15.31
-      '@types/redis':
-        specifier: ^4.0.11
-        version: 4.0.11
-      '@typescript-eslint/eslint-plugin':
-        specifier: ^8.18.2
-        version: 8.34.0(@typescript-eslint/parser@8.34.0(eslint@9.28.0)(typescript@5.8.3))(eslint@9.28.0)(typescript@5.8.3)
-      '@typescript-eslint/parser':
-        specifier: ^8.18.2
-        version: 8.34.0(eslint@9.28.0)(typescript@5.8.3)
-      eslint:
-        specifier: ^9.17.0
-        version: 9.28.0
-      tsx:
-        specifier: ^4.19.2
-        version: 4.20.2
+        specifier: ^20.0.0
+        version: 20.19.0
       typescript:
-        specifier: ^5.7.3
+        specifier: ^5.3.3
         version: 5.8.3
-      vitest:
-        specifier: ^2.1.8
-        version: 2.1.9(@types/node@22.15.31)
 
   packages/shared-utils:
     devDependencies:
@@ -337,11 +230,11 @@ packages:
     resolution: {integrity: sha512-vDVrlmRAY8z9Ul/HxT+8ceAru95LQgkSKiXkSYZvqtbkPSfhZJgpRp45Cldbh1GJ1kxzQkI70AqyrTI58KpaWQ==}
     engines: {node: '>=6.9.0'}
 
-  '@clickhouse/client-common@1.11.2':
-    resolution: {integrity: sha512-H4ECHqaipzMgiZKqpb1Z4N3Ofq+lVTCn8I59XsSynqrsfR4jWZD3PipXVvIzMpDmTMvrlJWrOwAdm0DMNiMQbA==}
+  '@clickhouse/client-common@0.2.10':
+    resolution: {integrity: sha512-BvTY0IXS96y9RUeNCpKL4HUzHmY80L0lDcGN0lmUD6zjOqYMn78+xyHYJ/AIAX7JQsc+/KwFt2soZutQTKxoGQ==}
 
-  '@clickhouse/client@1.11.2':
-    resolution: {integrity: sha512-ZE7Q1qxsDNXCkGPf1zqmhpZpwAKxKT+1s4Z432J1Mb2Gm26Y4tG/sJoug81AfAJTt6s7taO2vzNBAKfSR3SStg==}
+  '@clickhouse/client@0.2.10':
+    resolution: {integrity: sha512-ZwBgzjEAFN/ogS0ym5KHVbR7Hx/oYCX01qGp2baEyfN2HM73kf/7Vp3GvMHWRy+zUXISONEtFv7UTViOXnmFrg==}
     engines: {node: '>=16'}
 
   '@cspotcode/source-map-support@0.8.1':
@@ -949,10 +842,6 @@ packages:
 
   '@types/range-parser@1.2.7':
     resolution: {integrity: sha512-hKormJbkJqzQGhziax5PItDUTMAM9uE2XXQmM37dyd4hVM+5aVl7oVxMVUiVQn2oCQFN/LKCZdvSM0pFRqbSmQ==}
-
-  '@types/redis@4.0.11':
-    resolution: {integrity: sha512-bI+gth8La8Wg/QCR1+V1fhrL9+LZUSWfcqpOj2Kc80ZQ4ffbdL173vQd5wovmoV9i071FU9oP2g6etLuEwb6Rg==}
-    deprecated: This is a stub types definition. redis provides its own type definitions, so you do not need this installed.
 
   '@types/send@0.17.5':
     resolution: {integrity: sha512-z6F2D3cOStZvuk2SaP6YrwkNO65iTZcwA2ZkSABegdkAh/lf+Aa/YQndZVfmEXT5vgAp6zv06VQ3ejSVjAny4w==}
@@ -2788,11 +2677,11 @@ snapshots:
     dependencies:
       core-js-pure: 3.43.0
 
-  '@clickhouse/client-common@1.11.2': {}
+  '@clickhouse/client-common@0.2.10': {}
 
-  '@clickhouse/client@1.11.2':
+  '@clickhouse/client@0.2.10':
     dependencies:
-      '@clickhouse/client-common': 1.11.2
+      '@clickhouse/client-common': 0.2.10
 
   '@cspotcode/source-map-support@0.8.1':
     dependencies:
@@ -3255,10 +3144,6 @@ snapshots:
   '@types/qs@6.14.0': {}
 
   '@types/range-parser@1.2.7': {}
-
-  '@types/redis@4.0.11':
-    dependencies:
-      redis: 4.7.1
 
   '@types/send@0.17.5':
     dependencies:
@@ -5023,6 +4908,24 @@ snapshots:
   ts-api-utils@2.1.0(typescript@5.8.3):
     dependencies:
       typescript: 5.8.3
+
+  ts-node@10.9.2(@types/node@20.19.0)(typescript@5.8.3):
+    dependencies:
+      '@cspotcode/source-map-support': 0.8.1
+      '@tsconfig/node10': 1.0.11
+      '@tsconfig/node12': 1.0.11
+      '@tsconfig/node14': 1.0.3
+      '@tsconfig/node16': 1.0.4
+      '@types/node': 20.19.0
+      acorn: 8.15.0
+      acorn-walk: 8.3.4
+      arg: 4.1.3
+      create-require: 1.1.1
+      diff: 4.0.2
+      make-error: 1.3.6
+      typescript: 5.8.3
+      v8-compile-cache-lib: 3.0.1
+      yn: 3.1.1
 
   ts-node@10.9.2(@types/node@22.15.31)(typescript@5.8.3):
     dependencies:
