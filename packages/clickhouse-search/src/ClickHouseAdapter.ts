@@ -1,6 +1,6 @@
 import { createClient } from '@clickhouse/client';
 import { DatabaseAdapter } from 'search-framework';
-import { seedData as generatedArticles, getBenchmarkQueries } from 'shared-utils';
+import { seedData as generatedArticles } from 'shared-utils';
 
 export class ClickHouseAdapter implements DatabaseAdapter {
   public readonly name = 'ClickHouse';
@@ -197,29 +197,6 @@ export class ClickHouseAdapter implements DatabaseAdapter {
       total,
       offset,
       limit
-    };
-  }
-
-  async benchmark(queries: string[]): Promise<{ benchmarks: any[]; averageDuration: string }> {
-    const benchmarkQueries = getBenchmarkQueries();
-    const results = [];
-
-    for (const query of benchmarkQueries) {
-      const start = Date.now();
-      
-      const result = await this.search(query, 0);
-      const duration = Date.now() - start;
-      
-      results.push({
-        query,
-        resultCount: result.total,
-        duration: `${duration}ms`
-      });
-    }
-
-    return {
-      benchmarks: results,
-      averageDuration: `${results.reduce((sum, r) => sum + parseInt(r.duration), 0) / results.length}ms`
     };
   }
 

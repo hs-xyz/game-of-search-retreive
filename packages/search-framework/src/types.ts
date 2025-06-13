@@ -10,7 +10,14 @@ export interface SearchResult {
 export interface BenchmarkResult {
   query: string;
   resultCount: number;
-  duration: string;
+  iterations: number;
+  totalDuration: string;
+  averageDuration: string;
+  minDuration: string;
+  maxDuration: string;
+  medianDuration: string;
+  standardDeviation: string;
+  durations: number[];
 }
 
 export interface BenchmarkResponse {
@@ -37,7 +44,7 @@ export interface DatabaseAdapter {
   
   getAllRecords(limit: number, offset: number): Promise<Omit<AllRecordsResult, 'database' | 'duration'>>;
   
-  benchmark(queries: string[]): Promise<Omit<BenchmarkResponse, 'database'>>;
+  benchmark?(queries: string[]): Promise<Omit<BenchmarkResponse, 'database'>>;
   
   searchVariants?: {
     [variantName: string]: (query: string, limit: number) => Promise<Omit<SearchResult, 'database' | 'query' | 'duration' | 'searchType'>>;

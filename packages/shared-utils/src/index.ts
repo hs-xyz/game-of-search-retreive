@@ -125,18 +125,32 @@ export const getClickHouseData = () => {
 
 export const getBenchmarkQueries = (): string[] => [
   'machine learning',
-  'database',
-  'web development',
-  'cloud computing',
-  'performance',
-  'algorithms',
-  'artificial intelligence',
-  'cybersecurity',
-  'mobile development',
-  'microservices'
+  'performance'
 ];
 
 export const getRandomQuery = (): string => {
   const queries = getBenchmarkQueries();
   return queries[Math.floor(Math.random() * queries.length)];
+};
+
+export const calculateBenchmarkStats = (durations: number[]) => {
+  const sorted = [...durations].sort((a, b) => a - b);
+  const total = durations.reduce((sum, d) => sum + d, 0);
+  const average = total / durations.length;
+  const median = sorted.length % 2 === 0 
+    ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
+    : sorted[Math.floor(sorted.length / 2)];
+  
+  const variance = durations.reduce((sum, d) => sum + Math.pow(d - average, 2), 0) / durations.length;
+  const standardDeviation = Math.sqrt(variance);
+
+  return {
+    totalDuration: `${total}ms`,
+    averageDuration: `${Math.round(average)}ms`,
+    minDuration: `${Math.min(...durations)}ms`,
+    maxDuration: `${Math.max(...durations)}ms`,
+    medianDuration: `${Math.round(median)}ms`,
+    standardDeviation: `${Math.round(standardDeviation)}ms`,
+    durations
+  };
 }; 

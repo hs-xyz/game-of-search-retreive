@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
+import { getBenchmarkQueries, calculateBenchmarkStats } from 'shared-utils';
 import { 
   DatabaseAdapter, 
   SearchAppConfig, 
@@ -116,7 +117,13 @@ export class SearchApp {
 
   private async handleBenchmark(req: Request, res: Response): Promise<void> {
     try {
-      const result = await this.adapter.benchmark([]);
+      let result;
+      
+      if (this.adapter.benchmark) {
+        result = await this.adapter.benchmark([]);
+      } else {
+        result = await this.runFrameworkBenchmark();
+      }
       
       const response: BenchmarkResponse = {
         ...result,
@@ -127,6 +134,48 @@ export class SearchApp {
     } catch (error) {
       this.handleAdapterError(res, 'Benchmark failed', error);
     }
+  }
+
+  private async runFrameworkBenchmark(): Promise<Omit<BenchmarkResponse, 'database'>> {
+    const benchmarkQueries = getBenchmarkQueries();
+    const results = [];
+    const ITERATIONS = 100;
+
+    for (const query of benchmarkQueries) {
+      const durations: number[] = [];
+      let lastResultCount = 0;
+
+      for (let i = 0; i < ITERATIONS; i++) {
+        try {
+          const start = Date.now();
+          const result = await this.adapter.search(query, 50000);
+          const duration = Date.now() - start;
+          durations.push(duration);
+          lastResultCount = result.total;
+        } catch (error: any) {
+          console.error(`Benchmark error for query "${query}" iteration ${i + 1}:`, error.message);
+          durations.push(0);
+        }
+      }
+
+      const stats = calculateBenchmarkStats(durations);
+      results.push({
+        query,
+        resultCount: lastResultCount,
+        iterations: ITERATIONS,
+        ...stats
+      });
+    }
+
+    const totalAverage = results.reduce((sum, r) => {
+      const avg = parseInt(r.averageDuration.replace('ms', ''));
+      return sum + avg;
+    }, 0) / results.length;
+
+    return {
+      benchmarks: results,
+      averageDuration: `${Math.round(totalAverage)}ms`
+    };
   }
 
   private async handleSearchVariant(variant: string, req: Request, res: Response): Promise<void> {

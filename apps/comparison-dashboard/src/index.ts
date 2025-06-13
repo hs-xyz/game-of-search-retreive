@@ -147,7 +147,7 @@ app.get('/', (req, res) => {
 
             async function runBenchmarks() {
                 const benchmarkDiv = document.getElementById('benchmarks');
-                benchmarkDiv.innerHTML = '<div class="loading">Running benchmarks...</div>';
+                benchmarkDiv.innerHTML = '<div class="loading">Running benchmarks (100 iterations per query)...</div>';
 
                 const results = await Promise.all(
                     databases.map(async db => {
@@ -156,16 +156,26 @@ app.get('/', (req, res) => {
                     })
                 );
 
-                benchmarkDiv.innerHTML = '<h2>Benchmark Results</h2><div class="benchmark-grid">' +
+                benchmarkDiv.innerHTML = '<h2>Benchmark Results (100 iterations per query)</h2><div class="benchmark-grid">' +
                     results.map(result => 
                         '<div class="database-result">' +
                         '<div class="database-name">' + result.name + '</div>' +
-                        '<div class="metadata">Average Duration: ' + (result.averageDuration || 'N/A') + '</div>' +
+                        '<div class="metadata">Overall Average: ' + (result.averageDuration || 'N/A') + '</div>' +
                         (result.error ? 
                             '<div class="error">Error: ' + result.error + '</div>' :
                             (result.benchmarks || []).map(bench => 
-                                '<div style="margin: 5px 0; padding: 8px; background: white; border-radius: 4px;">' +
-                                'Query: "' + bench.query + '" | Results: ' + bench.resultCount + ' | Time: ' + bench.duration +
+                                '<div style="margin: 10px 0; padding: 12px; background: white; border-radius: 6px; border-left: 3px solid #007bff;">' +
+                                '<div style="font-weight: bold; margin-bottom: 8px;">Query: "' + bench.query + '"</div>' +
+                                '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; font-size: 12px;">' +
+                                '<div><strong>Results:</strong> ' + bench.resultCount + '</div>' +
+                                '<div><strong>Iterations:</strong> ' + bench.iterations + '</div>' +
+                                '<div><strong>Average:</strong> ' + bench.averageDuration + '</div>' +
+                                '<div><strong>Median:</strong> ' + bench.medianDuration + '</div>' +
+                                '<div><strong>Min:</strong> ' + bench.minDuration + '</div>' +
+                                '<div><strong>Max:</strong> ' + bench.maxDuration + '</div>' +
+                                '<div><strong>Std Dev:</strong> ' + bench.standardDeviation + '</div>' +
+                                '<div><strong>Total:</strong> ' + bench.totalDuration + '</div>' +
+                                '</div>' +
                                 '</div>'
                             ).join('')
                         ) +

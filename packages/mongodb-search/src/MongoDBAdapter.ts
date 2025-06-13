@@ -1,6 +1,6 @@
 import { MongoClient } from 'mongodb';
 import { DatabaseAdapter } from 'search-framework';
-import { seedData as generatedArticles, getBenchmarkQueries } from 'shared-utils';
+import { seedData as generatedArticles } from 'shared-utils';
 
 export class MongoDBAdapter implements DatabaseAdapter {
   public readonly name = 'MongoDB';
@@ -96,39 +96,23 @@ export class MongoDBAdapter implements DatabaseAdapter {
   }
 
   async getAllRecords(limit: number, offset: number): Promise<{ results: any[]; total: number; offset: number; limit: number }> {
-    const total = await this.collection.countDocuments();
-    const results = await this.collection.find()
+    const totalCount = await this.collection.countDocuments();
+    const documents = await this.collection.find({})
       .skip(offset)
       .limit(limit)
       .toArray();
 
     return {
-      results,
-      total,
+      results: documents.map((doc: any) => ({
+        id: doc.id,
+        title: doc.title,
+        content: doc.content,
+        author: doc.author,
+        tags: doc.tags
+      })),
+      total: totalCount,
       offset,
       limit
-    };
-  }
-
-  async benchmark(queries: string[]): Promise<{ benchmarks: any[]; averageDuration: string }> {
-    const benchmarkQueries = getBenchmarkQueries();
-    const results = [];
-
-    for (const query of benchmarkQueries) {
-      const start = Date.now();
-      const searchResult = await this.search(query, 50000);
-      const duration = Date.now() - start;
-      
-      results.push({
-        query,
-        resultCount: searchResult.total,
-        duration: `${duration}ms`
-      });
-    }
-
-    return {
-      benchmarks: results,
-      averageDuration: `${results.reduce((sum, r) => sum + parseInt(r.duration), 0) / results.length}ms`
     };
   }
 

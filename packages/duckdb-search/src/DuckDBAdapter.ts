@@ -1,6 +1,6 @@
 import { DuckDBConnection } from '@duckdb/node-api';
 import { DatabaseAdapter } from 'search-framework';
-import { seedData as generatedArticles, getBenchmarkQueries, Article } from 'shared-utils';
+import { seedData as generatedArticles, Article } from 'shared-utils';
 
 export class DuckDBAdapter implements DatabaseAdapter {
   public readonly name = 'DuckDB';
@@ -146,28 +146,6 @@ export class DuckDBAdapter implements DatabaseAdapter {
       total: totalResult[0]?.total || 0,
       offset,
       limit
-    };
-  }
-
-  async benchmark(queries: string[]): Promise<{ benchmarks: any[]; averageDuration: string }> {
-    const benchmarkQueries = getBenchmarkQueries();
-    const results: Array<{ query: string; resultCount: number; duration: string }> = [];
-
-    for (const query of benchmarkQueries) {
-      const start = Date.now();
-      const result = await this.search(query, 50000);
-      const duration = Date.now() - start;
-      
-      results.push({
-        query,
-        resultCount: result.total,
-        duration: `${duration}ms`
-      });
-    }
-
-    return {
-      benchmarks: results,
-      averageDuration: `${results.reduce((sum, r) => sum + parseInt(r.duration), 0) / results.length}ms`
     };
   }
 

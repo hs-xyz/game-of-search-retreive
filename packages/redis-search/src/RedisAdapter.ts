@@ -1,6 +1,6 @@
 import { createClient, SchemaFieldTypes } from 'redis';
 import { DatabaseAdapter } from 'search-framework';
-import { getRedisData, getBenchmarkQueries } from 'shared-utils';
+import { getRedisData } from 'shared-utils';
 
 export class RedisAdapter implements DatabaseAdapter {
   public readonly name = 'Redis Stack';
@@ -185,37 +185,5 @@ export class RedisAdapter implements DatabaseAdapter {
       console.error('Get all records error:', error.message);
       throw error;
     }
-  }
-
-  async benchmark(queries: string[]): Promise<{ benchmarks: any[]; averageDuration: string }> {
-    const benchmarkQueries = getBenchmarkQueries();
-    const results = [];
-
-    for (const query of benchmarkQueries) {
-      try {
-        const start = Date.now();
-        const result = await this.client.ft.search('articles', query);
-        const duration = Date.now() - start;
-        
-        results.push({
-          query,
-          resultCount: result.total,
-          duration: `${duration}ms`
-        });
-      } catch (error: any) {
-        console.error(`Benchmark error for query "${query}":`, error.message);
-        results.push({
-          query,
-          resultCount: 0,
-          duration: '0ms',
-          error: error.message
-        });
-      }
-    }
-
-    return {
-      benchmarks: results,
-      averageDuration: `${results.reduce((sum, r) => sum + parseInt(r.duration), 0) / results.length}ms`
-    };
   }
 } 

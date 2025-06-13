@@ -1,6 +1,6 @@
 import { Pool } from 'pg';
 import { DatabaseAdapter } from 'search-framework';
-import { seedData as generatedArticles, getBenchmarkQueries } from 'shared-utils';
+import { seedData as generatedArticles } from 'shared-utils';
 
 export class PostgreSQLAdapter implements DatabaseAdapter {
   public readonly name = 'PostgreSQL';
@@ -84,71 +84,51 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
   }
 
   async getAllRecords(limit: number, offset: number): Promise<{ results: any[]; total: number; offset: number; limit: number }> {
-    const countResult = await this.pool.query('SELECT COUNT(*) as total FROM articles');
-    const total = parseInt(countResult.rows[0].total);
+    const countResult = await this.pool.query('SELECT COUNT(*) as count FROM articles');
+    const total = parseInt(countResult.rows[0].count);
     
     const result = await this.pool.query(`
-      SELECT id, title, content, author, tags FROM articles
-      ORDER BY id ASC
+      SELECT id, title, content, author, tags 
+      FROM articles 
+      ORDER BY id 
       LIMIT $1 OFFSET $2
     `, [limit, offset]);
 
     return {
-      results: result.rows,
+      results: result.rows.map(row => ({
+        ...row,
+        tags: row.tags || []
+      })),
       total,
       offset,
       limit
     };
   }
 
-  async benchmark(queries: string[]): Promise<{ benchmarks: any[]; averageDuration: string }> {
-    const benchmarkQueries = getBenchmarkQueries();
-    const results = [];
-
-    for (const query of benchmarkQueries) {
-      const start = Date.now();
-      const result = await this.pool.query(`
-        SELECT COUNT(*) as count
-        FROM articles 
-        WHERE ts_vector @@ plainto_tsquery('english', $1)
-      `, [query]);
-      const duration = Date.now() - start;
-      
-      results.push({
-        query,
-        resultCount: parseInt(result.rows[0].count),
-        duration: `${duration}ms`
-      });
-    }
-
-    return {
-      benchmarks: results,
-      averageDuration: `${results.reduce((sum, r) => sum + parseInt(r.duration), 0) / results.length}ms`
-    };
-  }
-
   public searchVariants = {
     phrase: async (query: string, limit: number) => {
-      const countResult = await this.pool.query(`
-        SELECT COUNT(*) as total
-        FROM articles 
-        WHERE ts_vector @@ phraseto_tsquery('english', $1)
-      `, [query]);
-      
-      const totalCount = parseInt(countResult.rows[0].total);
-      
       const result = await this.pool.query(`
         SELECT id, title, content, author, tags,
-               ts_rank(ts_vector, phraseto_tsquery('english', $1)) as rank
+               ts_rank(ts_vector, phraseto_tsquery('english', $1)) as relevance_score
         FROM articles 
         WHERE ts_vector @@ phraseto_tsquery('english', $1)
-        ORDER BY rank DESC
+        ORDER BY relevance_score DESC
         LIMIT $2
       `, [query, limit]);
 
+      const countResult = await this.pool.query(`
+        SELECT COUNT(*) as count
+        FROM articles 
+        WHERE ts_vector @@ phraseto_tsquery('english', $1)
+      `, [query]);
+
       return {
-        results: result.rows,
-        total: totalCount
+        results: result.rows.map(row => ({
+          ...row,
+          tags: row.tags || [],
+          relevance_score: parseFloat(row.relevance_score)
+        })),
+        total: parseInt(countResult.rows[0].count)
       };
     },
 
