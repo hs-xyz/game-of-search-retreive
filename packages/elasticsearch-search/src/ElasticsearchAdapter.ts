@@ -95,7 +95,7 @@ export class ElasticsearchAdapter implements DatabaseAdapter {
 
       await this.client.bulk({ body });
       
-      if ((i + batchSize) % 10000 === 0) {
+      if ((i + batchSize) % 100000 === 0) {
         console.log(`Indexed ${Math.min(i + batchSize, articles.length)} articles...`);
       }
     }

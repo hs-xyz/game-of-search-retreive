@@ -33,7 +33,7 @@ export class DuckDBAdapter implements DatabaseAdapter {
   }
 
   private async seedData(): Promise<void> {
-    console.log('Seeding DuckDB with 100k articles...');
+    console.log('Seeding DuckDB with 1M articles...');
     const articles = generatedArticles;
 
     await this.connection!.run('BEGIN TRANSACTION');
@@ -61,14 +61,15 @@ export class DuckDBAdapter implements DatabaseAdapter {
       }
 
       await this.connection!.run('COMMIT');
-      
-      const count = await this.executeQuery('SELECT COUNT(*) as count FROM articles');
-      console.log(`Successfully seeded ${articles.length} articles to DuckDB. Verified count: ${count[0]?.count || 0}`);
+      console.log(`Transaction committed successfully`);
     } catch (error) {
       console.error('Error during seeding:', error);
       await this.connection!.run('ROLLBACK');
       throw error;
     }
+
+    const count = await this.executeQuery('SELECT COUNT(*) as count FROM articles');
+    console.log(`Successfully seeded ${articles.length} articles to DuckDB. Verified count: ${count[0]?.count || 0}`);
   }
 
   private escapeString(str: string): string {

@@ -92,31 +92,43 @@ export class ClickHouseAdapter implements DatabaseAdapter {
   }
 
   private async seedData(): Promise<void> {
-    console.log('Seeding ClickHouse with 100k articles...');
+    console.log('Seeding ClickHouse with 1M articles...');
     const articles = generatedArticles;
 
     await this.client.command({
       query: 'TRUNCATE TABLE articles'
     });
 
-    const values = articles.map(article => ({
-      id: parseInt(article.id),
-      title: article.title,
-      content: article.content,
-      author: article.author,
-      tags: article.tags,
-      searchable_text: `${article.title} ${article.content} ${article.author} ${article.tags.join(' ')}`,
-      title_tokens: article.title.toLowerCase().split(/\W+/).filter(Boolean),
-      content_tokens: article.content.toLowerCase().split(/\W+/).filter(Boolean)
-    }));
+    const batchSize = 10000;
+    let processed = 0;
 
-    await this.client.insert({
-      table: 'articles',
-      values,
-      format: 'JSONEachRow'
-    });
+    for (let i = 0; i < articles.length; i += batchSize) {
+      const batch = articles.slice(i, i + batchSize);
+      
+      const values = batch.map(article => ({
+        id: parseInt(article.id),
+        title: article.title,
+        content: article.content,
+        author: article.author,
+        tags: article.tags,
+        searchable_text: `${article.title} ${article.content} ${article.author} ${article.tags.join(' ')}`,
+        title_tokens: article.title.toLowerCase().split(/\W+/).filter(Boolean),
+        content_tokens: article.content.toLowerCase().split(/\W+/).filter(Boolean)
+      }));
 
-    console.log(`Seeded ${articles.length} articles to ClickHouse with enhanced search optimization`);
+      await this.client.insert({
+        table: 'articles',
+        values,
+        format: 'JSONEachRow'
+      });
+
+      processed += batch.length;
+      if (processed % 50000 === 0) {
+        console.log(`Seeded ${processed} articles...`);
+      }
+    }
+
+    console.log(`Successfully seeded ${articles.length} articles to ClickHouse with enhanced search optimization`);
   }
 
   async search(query: string, limit: number): Promise<{ results: any[]; total: number; }> {

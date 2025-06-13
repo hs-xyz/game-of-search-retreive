@@ -79,7 +79,7 @@ const tagGroups = [
 ];
 
 const seededRandom = (seed: number) => {
-  let x = Math.sin(seed) * 10000;
+  let x = Math.sin(seed) * 100000;
   return x - Math.floor(x);
 };
 
@@ -100,7 +100,7 @@ const generateArticle = (index: number): Article => {
   };
 };
 
-export const generateSeedData = (count: number = 100000): Article[] => {
+export const generateSeedData = (count: number = 1000000): Article[] => {
   return Array.from({ length: count }, (_, index) => generateArticle(index));
 };
 

@@ -98,16 +98,26 @@ app.get('/', (req, res) => {
                 const healthDiv = document.getElementById('healthStatus');
                 healthDiv.innerHTML = 'Checking health...';
                 
-                const healthResults = await Promise.all(
-                    databases.map(async db => {
+                const [healthResults, recordResults] = await Promise.all([
+                    Promise.all(databases.map(async db => {
                         const result = await makeRequest(db.url + '/health');
                         return { name: db.name, ...result };
-                    })
+                    })),
+                    Promise.all(databases.map(async db => {
+                        const result = await makeRequest(db.url + '/all-records?limit=0');
+                        return { name: db.name, total: result.total || 0 };
+                    }))
+                ]);
+
+                const recordCounts = Object.fromEntries(
+                    recordResults.map(r => [r.name, r.total])
                 );
 
                 healthDiv.innerHTML = healthResults.map(result => 
                     '<div class="health-item ' + (result.error ? 'unhealthy' : 'healthy') + '">' +
-                    result.name + ': ' + (result.error || result.status) + '</div>'
+                    result.name + ': ' + (result.error || result.status) + 
+                    ' | Records: ' + (recordCounts[result.name] || 0).toLocaleString() +
+                    '</div>'
                 ).join('');
             }
 

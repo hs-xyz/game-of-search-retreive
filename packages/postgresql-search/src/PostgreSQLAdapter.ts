@@ -36,27 +36,49 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
     `);
 
     await this.seedData();
-    console.log('PostgreSQL database initialized with 100k articles');
+    console.log('PostgreSQL database initialized with 1M articles');
   }
 
   private async seedData(): Promise<void> {
-    console.log('Seeding PostgreSQL with 100k articles...');
+    console.log('Seeding PostgreSQL with 1M articles...');
     const articles = generatedArticles;
 
     await this.pool.query('DELETE FROM articles');
 
-    for (const article of articles) {
-      await this.pool.query(
-        'INSERT INTO articles (id, title, content, author, tags) VALUES ($1, $2, $3, $4, $5)',
-        [parseInt(article.id), article.title, article.content, article.author, article.tags]
-      );
+    const batchSize = 1000;
+    let processed = 0;
+
+    for (let i = 0; i < articles.length; i += batchSize) {
+      const batch = articles.slice(i, i + batchSize);
+      
+      const values = batch.map((_, index) => {
+        const paramIndex = index * 4;
+        return `(${batch[index].id}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4})`;
+      }).join(',');
+
+      const params = batch.flatMap(article => [
+        article.title,
+        article.content,
+        article.author,
+        article.tags
+      ]);
+
+      const query = `INSERT INTO articles (id, title, content, author, tags) VALUES ${values}`;
+      
+      await this.pool.query(query, params);
+
+      processed += batch.length;
+      if (processed % 50000 === 0) {
+        console.log(`Seeded ${processed} articles...`);
+      }
     }
 
+    console.log('Building full-text search vectors...');
     await this.pool.query(`
       UPDATE articles SET ts_vector = to_tsvector('english', title || ' ' || content || ' ' || author || ' ' || array_to_string(tags, ' '))
     `);
 
-    console.log(`Seeded ${articles.length} articles to PostgreSQL`);
+    console.log(`Successfully seeded ${articles.length} articles to PostgreSQL`);
   }
 
   async search(query: string, limit: number): Promise<{ results: any[]; total: number }> {
