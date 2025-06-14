@@ -132,6 +132,7 @@ export class ClickHouseAdapter implements DatabaseAdapter {
   }
 
   async search(query: string, limit: number): Promise<{ results: any[]; total: number; }> {
+    const effectiveLimit = Math.min(limit, 100);
     const queryWords = query.toLowerCase().split(/\s+/).filter(word => word.length > 0);
     
     const wordConditions = queryWords.map(word => {
@@ -144,12 +145,12 @@ export class ClickHouseAdapter implements DatabaseAdapter {
 
     const whereClause = wordConditions.join(' AND ');
     
-    const searchQuery = limit > 0 ? `
+    const searchQuery = effectiveLimit > 0 ? `
       SELECT id, title, content, author, tags
       FROM articles
       WHERE ${whereClause}
       ORDER BY id ASC
-      LIMIT ${limit}
+      LIMIT ${effectiveLimit}
     ` : '';
     
     const countQuery = `
@@ -158,7 +159,7 @@ export class ClickHouseAdapter implements DatabaseAdapter {
       WHERE ${whereClause}
     `;
 
-    const queries = limit > 0 
+    const queries = effectiveLimit > 0 
       ? [
           this.client.query({ query: searchQuery, format: 'JSONEachRow' }),
           this.client.query({ query: countQuery, format: 'JSONEachRow' })
@@ -167,11 +168,11 @@ export class ClickHouseAdapter implements DatabaseAdapter {
 
     const queryResults = await Promise.all(queries);
     
-    const countData = await queryResults[limit > 0 ? 1 : 0].json() as any;
+    const countData = await queryResults[effectiveLimit > 0 ? 1 : 0].json() as any;
     const total = Array.isArray(countData) ? countData[0]?.total || 0 : countData.total || 0;
 
     let results = [];
-    if (limit > 0) {
+    if (effectiveLimit > 0) {
       const resultData = await queryResults[0].json() as any;
       results = Array.isArray(resultData) ? resultData : [resultData];
     }
@@ -183,16 +184,17 @@ export class ClickHouseAdapter implements DatabaseAdapter {
   }
 
   async getAllRecords(limit: number, offset: number): Promise<{ results: any[]; total: number; offset: number; limit: number }> {
+    const effectiveLimit = Math.min(limit, 100);
     const total = await this.getFastCount();
 
     let results = [];
-    if (limit > 0) {
+    if (effectiveLimit > 0) {
       const result = await this.client.query({
         query: `
           SELECT id, title, content, author, tags
           FROM articles
           ORDER BY id ASC
-          LIMIT ${limit} OFFSET ${offset}
+          LIMIT ${effectiveLimit} OFFSET ${offset}
         `,
         format: 'JSONEachRow'
       });
@@ -205,7 +207,7 @@ export class ClickHouseAdapter implements DatabaseAdapter {
       results,
       total,
       offset,
-      limit
+      limit: effectiveLimit
     };
   }
 
@@ -241,6 +243,7 @@ export class ClickHouseAdapter implements DatabaseAdapter {
 
   public searchVariants = {
     like: async (query: string, limit: number) => {
+      const effectiveLimit = Math.min(limit, 100);
       const whereClause = `
         lower(title) LIKE lower(concat('%', '${query}', '%'))
         OR lower(content) LIKE lower(concat('%', '${query}', '%'))
@@ -268,7 +271,7 @@ export class ClickHouseAdapter implements DatabaseAdapter {
           FROM articles
           WHERE ${whereClause}
           ORDER BY relevance_score DESC
-          LIMIT ${limit}
+          LIMIT ${effectiveLimit}
         `,
         format: 'JSONEachRow'
       });
@@ -280,6 +283,7 @@ export class ClickHouseAdapter implements DatabaseAdapter {
     },
 
     multiword: async (query: string, limit: number) => {
+      const effectiveLimit = Math.min(limit, 100);
       const words = query.split(' ').filter(w => w.length > 0);
       
       const whereClause = words.map((word, i) => `
@@ -311,7 +315,7 @@ export class ClickHouseAdapter implements DatabaseAdapter {
           FROM articles
           WHERE ${whereClause}
           ORDER BY relevance_score DESC
-          LIMIT ${limit}
+          LIMIT ${effectiveLimit}
         `,
         format: 'JSONEachRow'
       });

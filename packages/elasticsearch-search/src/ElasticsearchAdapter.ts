@@ -104,77 +104,42 @@ export class ElasticsearchAdapter implements DatabaseAdapter {
     console.log(`Seeded ${articles.length} articles to Elasticsearch with enhanced features`);
   }
 
-  async search(query: string, limit: number): Promise<{ results: any[]; total: number; }> {
-    const searchBody = {
-      query: {
-        bool: {
-          should: [
-            {
-              match: {
-                title: {
-                  query: query,
-                  operator: 'and' as const
-                }
-              }
-            },
-            {
-              match: {
-                content: {
-                  query: query,
-                  operator: 'and' as const
-                }
-              }
-            },
-            {
-              match: {
-                author: {
-                  query: query,
-                  operator: 'and' as const
-                }
-              }
-            },
-            {
-              match: {
-                searchable_text: {
-                  query: query,
-                  operator: 'and' as const
-                }
-              }
-            }
-          ],
-          minimum_should_match: 1
-        }
-      },
-      size: limit === 0 ? 0 : limit,
-      track_total_hits: true,
-      _source: ['id', 'title', 'content', 'author', 'tags']
-    };
-
+  async search(query: string, limit: number): Promise<{ results: any[]; total: number }> {
+    const effectiveLimit = Math.min(limit, 100);
+    
     const response = await this.client.search({
-      index: 'articles',
-      body: searchBody
+      index: this.indexName,
+      body: {
+        query: {
+          multi_match: {
+            query,
+            fields: ['title^3', 'content', 'author^2', 'tags'],
+            type: 'best_fields'
+          }
+        },
+        size: effectiveLimit
+      }
     });
 
-    const hits = response.hits.hits.map((hit: any) => hit._source);
-    const total = typeof response.hits.total === 'object' 
-      ? response.hits.total.value || 0
-      : response.hits.total || 0;
+    const results = (response.hits?.hits || []).map((hit: any) => hit._source);
+    const total = (response.hits?.total as any)?.value || response.hits?.total || 0;
 
     return {
-      results: hits,
-      total: total
+      results,
+      total
     };
   }
 
   async getAllRecords(limit: number, offset: number): Promise<{ results: any[]; total: number; offset: number; limit: number }> {
+    const effectiveLimit = Math.min(limit, 100);
     const total = await this.getFastCount();
 
-    if (limit === 0) {
+    if (effectiveLimit === 0) {
       return {
         results: [],
         total,
         offset,
-        limit
+        limit: effectiveLimit
       };
     }
 
@@ -183,7 +148,7 @@ export class ElasticsearchAdapter implements DatabaseAdapter {
       body: {
         query: { match_all: {} },
         from: offset,
-        size: limit,
+        size: effectiveLimit,
         sort: [{ id: 'asc' }]
       }
     });
@@ -194,7 +159,7 @@ export class ElasticsearchAdapter implements DatabaseAdapter {
       results,
       total,
       offset,
-      limit
+      limit: effectiveLimit
     };
   }
 

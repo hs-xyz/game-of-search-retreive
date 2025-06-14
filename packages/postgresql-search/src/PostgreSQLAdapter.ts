@@ -82,6 +82,8 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
   }
 
   async search(query: string, limit: number): Promise<{ results: any[]; total: number }> {
+    const effectiveLimit = Math.min(limit, 100);
+    
     const countResult = await this.pool.query(`
       SELECT COUNT(*) as total
       FROM articles 
@@ -97,7 +99,7 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
       WHERE ts_vector @@ plainto_tsquery('english', $1)
       ORDER BY rank DESC
       LIMIT $2
-    `, [query, limit]);
+    `, [query, effectiveLimit]);
 
     return {
       results: result.rows,
@@ -106,6 +108,7 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
   }
 
   async getAllRecords(limit: number, offset: number): Promise<{ results: any[]; total: number; offset: number; limit: number }> {
+    const effectiveLimit = Math.min(limit, 100);
     const total = await this.getFastCount();
 
     const result = await this.pool.query(`
@@ -113,7 +116,7 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
       FROM articles 
       ORDER BY id 
       LIMIT $1 OFFSET $2
-    `, [limit, offset]);
+    `, [effectiveLimit, offset]);
 
     return {
       results: result.rows.map(row => ({
@@ -122,7 +125,7 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
       })),
       total,
       offset,
-      limit
+      limit: effectiveLimit
     };
   }
 
@@ -169,6 +172,7 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
 
   public searchVariants = {
     phrase: async (query: string, limit: number) => {
+      const effectiveLimit = Math.min(limit, 100);
       const result = await this.pool.query(`
         SELECT id, title, content, author, tags,
                ts_rank(ts_vector, phraseto_tsquery('english', $1)) as relevance_score
@@ -176,7 +180,7 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
         WHERE ts_vector @@ phraseto_tsquery('english', $1)
         ORDER BY relevance_score DESC
         LIMIT $2
-      `, [query, limit]);
+      `, [query, effectiveLimit]);
 
       const countResult = await this.pool.query(`
         SELECT COUNT(*) as count
@@ -195,6 +199,7 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
     },
 
     ilike: async (query: string, limit: number) => {
+      const effectiveLimit = Math.min(limit, 100);
       const countResult = await this.pool.query(`
         SELECT COUNT(*) as total
         FROM articles
@@ -208,7 +213,7 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
         FROM articles
         WHERE title ILIKE $1 OR content ILIKE $1 OR author ILIKE $1
         LIMIT $2
-      `, [`%${query}%`, limit]);
+      `, [`%${query}%`, effectiveLimit]);
 
       return {
         results: result.rows,

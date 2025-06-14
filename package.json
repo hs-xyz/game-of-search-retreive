@@ -2,7 +2,7 @@
   "name": "fulltext-search-comparison",
   "private": true,
   "scripts": {
-    "clean-start": "pnpm run build && docker-compose down --volumes --remove-orphans && docker image prune -f && docker system prune -f --volumes && docker-compose up --build -d --no-cache",
+    "clean-start": "pnpm run build && docker-compose down --volumes --remove-orphans && docker image prune -f && docker system prune -f --volumes && docker-compose up --build -d",
     "build": "turbo run build",
     "dev": "turbo run dev",
     "test": "turbo run test",

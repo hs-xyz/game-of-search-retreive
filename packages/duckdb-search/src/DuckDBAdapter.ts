@@ -78,6 +78,7 @@ export class DuckDBAdapter implements DatabaseAdapter {
   }
 
   async search(query: string, limit: number): Promise<{ results: any[]; total: number; }> {
+    const effectiveLimit = Math.min(limit, 100);
     const searchTerms = query.toLowerCase().split(/\s+/).filter(term => term.length > 0);
     
     const whereClause = searchTerms.map(term => 
@@ -102,7 +103,7 @@ export class DuckDBAdapter implements DatabaseAdapter {
       ORDER BY relevance_score DESC, 
                LENGTH(title) ASC,
                id ASC
-      LIMIT ${limit}
+      LIMIT ${effectiveLimit}
     `;
 
     const [total, searchResult] = await Promise.all([
@@ -124,13 +125,14 @@ export class DuckDBAdapter implements DatabaseAdapter {
   }
 
   async getAllRecords(limit: number, offset: number): Promise<{ results: any[]; total: number; offset: number; limit: number }> {
+    const effectiveLimit = Math.min(limit, 100);
     const total = await this.getFastCount();
 
     const results = await this.executeQuery(`
       SELECT id, title, content, author, tags
       FROM articles 
       ORDER BY id 
-      LIMIT ${limit} OFFSET ${offset}
+      LIMIT ${effectiveLimit} OFFSET ${offset}
     `);
 
     return {
@@ -143,7 +145,7 @@ export class DuckDBAdapter implements DatabaseAdapter {
       })),
       total,
       offset,
-      limit
+      limit: effectiveLimit
     };
   }
 

@@ -63,6 +63,7 @@ export class MongoDBAdapter implements DatabaseAdapter {
   }
 
   async search(query: string, limit: number): Promise<{ results: any[]; total: number; }> {
+    const effectiveLimit = Math.min(limit, 100);
     const queryWords = query.toLowerCase().split(/\s+/).filter(word => word.length > 0);
     
     const wordConditions = queryWords.map(word => {
@@ -84,7 +85,7 @@ export class MongoDBAdapter implements DatabaseAdapter {
       : { $and: wordConditions };
 
     const results = await this.collection.find(searchCondition)
-      .limit(limit)
+      .limit(effectiveLimit)
       .toArray();
 
     const total = await this.collection.countDocuments(searchCondition);
@@ -96,11 +97,12 @@ export class MongoDBAdapter implements DatabaseAdapter {
   }
 
   async getAllRecords(limit: number, offset: number): Promise<{ results: any[]; total: number; offset: number; limit: number }> {
+    const effectiveLimit = Math.min(limit, 100);
     const total = await this.getFastCount();
 
     const documents = await this.collection.find({})
       .skip(offset)
-      .limit(limit)
+      .limit(effectiveLimit)
       .toArray();
 
     return {
@@ -113,7 +115,7 @@ export class MongoDBAdapter implements DatabaseAdapter {
       })),
       total,
       offset,
-      limit
+      limit: effectiveLimit
     };
   }
 
@@ -133,6 +135,7 @@ export class MongoDBAdapter implements DatabaseAdapter {
 
   public searchVariants = {
     regex: async (query: string, limit: number) => {
+      const effectiveLimit = Math.min(limit, 100);
       const queryWords = query.toLowerCase().split(/\s+/).filter(word => word.length > 0);
       
       const regexQueries = queryWords.map(word => ({
@@ -148,7 +151,7 @@ export class MongoDBAdapter implements DatabaseAdapter {
       const total = await this.collection.countDocuments(searchQuery);
       const results = await this.collection
         .find(searchQuery)
-        .limit(limit)
+        .limit(effectiveLimit)
         .toArray();
 
       return { results, total };

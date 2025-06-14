@@ -223,8 +223,9 @@ export class RedisAdapter implements DatabaseAdapter {
 
   async search(query: string, limit: number): Promise<{ results: any[]; total: number }> {
     try {
+      const effectiveLimit = Math.min(limit, 100);
       const results = await this.client.ft.search('articles', query, {
-        LIMIT: { from: 0, size: Math.min(limit, 1000000) }
+        LIMIT: { from: 0, size: effectiveLimit }
       });
 
       return {
@@ -242,19 +243,20 @@ export class RedisAdapter implements DatabaseAdapter {
 
   async getAllRecords(limit: number, offset: number): Promise<{ results: any[]; total: number; offset: number; limit: number }> {
     try {
+      const effectiveLimit = Math.min(limit, 100);
       const total = await this.getFastCount();
       
-      if (limit === 0) {
+      if (effectiveLimit === 0) {
         return {
           results: [],
           total,
           offset,
-          limit
+          limit: effectiveLimit
         };
       }
 
       const results = await this.client.ft.search('articles', '*', {
-        LIMIT: { from: offset, size: limit }
+        LIMIT: { from: offset, size: effectiveLimit }
       });
 
       return {
@@ -264,7 +266,7 @@ export class RedisAdapter implements DatabaseAdapter {
         })),
         total,
         offset,
-        limit
+        limit: effectiveLimit
       };
     } catch (error: any) {
       console.error('Get all records error:', error.message);
