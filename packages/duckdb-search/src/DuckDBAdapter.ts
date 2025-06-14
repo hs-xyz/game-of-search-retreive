@@ -26,7 +26,13 @@ export class DuckDBAdapter implements DatabaseAdapter {
         content TEXT,
         author VARCHAR,
         tags VARCHAR,
-        searchable_text VARCHAR
+        searchable_text VARCHAR,
+        difficulty VARCHAR,
+        type VARCHAR,
+        read_time INTEGER,
+        publish_date DATE,
+        views INTEGER,
+        rating DECIMAL(3,1)
       )
     `);
     console.log('Table created successfully');
@@ -45,11 +51,18 @@ export class DuckDBAdapter implements DatabaseAdapter {
         
         const values = batch.map(article => {
           const searchableText = `${article.title} ${article.content} ${article.author} ${article.tags.join(' ')}`;
-          return `('${this.escapeString(article.id)}', '${this.escapeString(article.title)}', '${this.escapeString(article.content)}', '${this.escapeString(article.author)}', '${this.escapeString(article.tags.join(','))}', '${this.escapeString(searchableText)}')`;
+          const difficulty = (article as any).difficulty || 'beginner';
+          const type = (article as any).type || 'article';
+          const readTime = (article as any).readTime || 5;
+          const publishDate = (article as any).publishDate || '2023-01-01';
+          const views = (article as any).views || 1000;
+          const rating = (article as any).rating || 4.0;
+          
+          return `('${this.escapeString(article.id)}', '${this.escapeString(article.title)}', '${this.escapeString(article.content)}', '${this.escapeString(article.author)}', '${this.escapeString(article.tags.join(','))}', '${this.escapeString(searchableText)}', '${this.escapeString(difficulty)}', '${this.escapeString(type)}', ${readTime}, '${publishDate}', ${views}, ${rating})`;
         }).join(',\n');
 
         const insertQuery = `
-          INSERT INTO articles (id, title, content, author, tags, searchable_text) 
+          INSERT INTO articles (id, title, content, author, tags, searchable_text, difficulty, type, read_time, publish_date, views, rating) 
           VALUES ${values}
         `;
 
@@ -92,7 +105,7 @@ export class DuckDBAdapter implements DatabaseAdapter {
     `;
 
     const searchQuery = `
-      SELECT id, title, content, author, tags,
+      SELECT id, title, content, author, tags, difficulty, type, read_time, publish_date, views, rating,
              CASE 
                WHEN LOWER(title) LIKE '%${this.escapeString(query.toLowerCase())}%' THEN 3
                WHEN LOWER(author) LIKE '%${this.escapeString(query.toLowerCase())}%' THEN 2
@@ -118,7 +131,13 @@ export class DuckDBAdapter implements DatabaseAdapter {
         content: row[2],
         author: row[3],
         tags: row[4] ? row[4].split(',') : [],
-        relevance_score: row[5]
+        difficulty: row[5],
+        type: row[6],
+        readTime: row[7],
+        publishDate: row[8],
+        views: row[9],
+        rating: row[10],
+        relevance_score: row[11]
       })),
       total
     };
@@ -129,7 +148,7 @@ export class DuckDBAdapter implements DatabaseAdapter {
     const total = await this.getFastCount();
 
     const results = await this.executeQuery(`
-      SELECT id, title, content, author, tags
+      SELECT id, title, content, author, tags, difficulty, type, read_time, publish_date, views, rating
       FROM articles 
       ORDER BY id 
       LIMIT ${effectiveLimit} OFFSET ${offset}
@@ -141,7 +160,13 @@ export class DuckDBAdapter implements DatabaseAdapter {
         title: row[1],
         content: row[2],
         author: row[3],
-        tags: row[4] ? row[4].split(',') : []
+        tags: row[4] ? row[4].split(',') : [],
+        difficulty: row[5],
+        type: row[6],
+        readTime: row[7],
+        publishDate: row[8],
+        views: row[9],
+        rating: row[10]
       })),
       total,
       offset,

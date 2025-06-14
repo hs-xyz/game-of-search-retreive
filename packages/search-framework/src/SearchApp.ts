@@ -10,6 +10,13 @@ import {
   BenchmarkResponse
 } from './types';
 
+interface BenchmarkQuery {
+  query: string;
+  category: string;
+  description: string;
+  expectedResults: 'low' | 'medium' | 'high';
+}
+
 export class SearchApp {
   private app: express.Application;
   private adapter: DatabaseAdapter;
@@ -137,30 +144,34 @@ export class SearchApp {
   }
 
   private async runFrameworkBenchmark(): Promise<Omit<BenchmarkResponse, 'database'>> {
-    const benchmarkQueries = getBenchmarkQueries();
+    const benchmarkQueries = getBenchmarkQueries() as any[];
     const results = [];
-    const ITERATIONS = 3;
+    const ITERATIONS = 5;
 
-    for (const query of benchmarkQueries) {
+    for (const benchmarkQuery of benchmarkQueries) {
       const durations: number[] = [];
       let lastResultCount = 0;
+      const queryString = typeof benchmarkQuery === 'string' ? benchmarkQuery : benchmarkQuery.query;
 
       for (let i = 0; i < ITERATIONS; i++) {
         try {
           const start = Date.now();
-          const result = await this.adapter.search(query, 50000);
+          const result = await this.adapter.search(queryString, 50000);
           const duration = Date.now() - start;
           durations.push(duration);
           lastResultCount = result.total;
         } catch (error: any) {
-          console.error(`Benchmark error for query "${query}" iteration ${i + 1}:`, error.message);
+          console.error(`Benchmark error for query "${queryString}" iteration ${i + 1}:`, error.message);
           durations.push(0);
         }
       }
 
       const stats = calculateBenchmarkStats(durations);
       results.push({
-        query,
+        query: queryString,
+        category: typeof benchmarkQuery === 'object' ? benchmarkQuery.category : 'general',
+        description: typeof benchmarkQuery === 'object' ? benchmarkQuery.description : 'Benchmark query',
+        expectedResults: typeof benchmarkQuery === 'object' ? benchmarkQuery.expectedResults : 'medium',
         resultCount: lastResultCount,
         iterations: ITERATIONS,
         ...stats

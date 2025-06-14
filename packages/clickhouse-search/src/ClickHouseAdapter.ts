@@ -146,7 +146,7 @@ export class ClickHouseAdapter implements DatabaseAdapter {
     const whereClause = wordConditions.join(' AND ');
     
     const searchQuery = effectiveLimit > 0 ? `
-      SELECT id, title, content, author, tags
+      SELECT id, title, content, author, tags, difficulty, type, read_time, publish_date, views, rating
       FROM articles
       WHERE ${whereClause}
       ORDER BY id ASC
@@ -191,7 +191,7 @@ export class ClickHouseAdapter implements DatabaseAdapter {
     if (effectiveLimit > 0) {
       const result = await this.client.query({
         query: `
-          SELECT id, title, content, author, tags
+          SELECT id, title, content, author, tags, difficulty, type, read_time, publish_date, views, rating
           FROM articles
           ORDER BY id ASC
           LIMIT ${effectiveLimit} OFFSET ${offset}
@@ -264,7 +264,7 @@ export class ClickHouseAdapter implements DatabaseAdapter {
       
       const result = await this.client.query({
         query: `
-          SELECT id, title, content, author, tags,
+          SELECT id, title, content, author, tags, difficulty, type, read_time, publish_date, views, rating,
                  (position(lower(title), lower('${query}')) > 0) * 3 +
                  (position(lower(content), lower('${query}')) > 0) * 2 +
                  (position(lower(author), lower('${query}')) > 0) * 1 as relevance_score
@@ -306,7 +306,7 @@ export class ClickHouseAdapter implements DatabaseAdapter {
       
       const result = await this.client.query({
         query: `
-          SELECT id, title, content, author, tags,
+          SELECT id, title, content, author, tags, difficulty, type, read_time, publish_date, views, rating,
                  ${words.map((word, i) => `
                    (positionCaseInsensitive(title, '${word}') > 0) * 3 +
                    (positionCaseInsensitive(content, '${word}') > 0) * 2 +

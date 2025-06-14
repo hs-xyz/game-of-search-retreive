@@ -55,6 +55,12 @@ export class MongoDBAdapter implements DatabaseAdapter {
     
     const articlesWithSearchableText = articles.map(article => ({
       ...article,
+      difficulty: (article as any).difficulty || 'beginner',
+      type: (article as any).type || 'article',
+      readTime: (article as any).readTime || 5,
+      publishDate: (article as any).publishDate || '2023-01-01',
+      views: (article as any).views || 1000,
+      rating: (article as any).rating || 4.0,
       searchable_text: `${article.title} ${article.content} ${article.author} ${article.tags.join(' ')}`
     }));
 
@@ -111,7 +117,13 @@ export class MongoDBAdapter implements DatabaseAdapter {
         title: doc.title,
         content: doc.content,
         author: doc.author,
-        tags: doc.tags
+        tags: doc.tags,
+        difficulty: doc.difficulty,
+        type: doc.type,
+        readTime: doc.readTime,
+        publishDate: doc.publishDate,
+        views: doc.views,
+        rating: doc.rating
       })),
       total,
       offset,

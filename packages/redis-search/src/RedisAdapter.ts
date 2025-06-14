@@ -111,7 +111,13 @@ export class RedisAdapter implements DatabaseAdapter {
         title: SchemaFieldTypes.TEXT,
         content: SchemaFieldTypes.TEXT,
         author: SchemaFieldTypes.TEXT,
-        tags: SchemaFieldTypes.TEXT
+        tags: SchemaFieldTypes.TEXT,
+        difficulty: SchemaFieldTypes.TAG,
+        type: SchemaFieldTypes.TAG,
+        readTime: SchemaFieldTypes.NUMERIC,
+        publishDate: SchemaFieldTypes.TEXT,
+        views: SchemaFieldTypes.NUMERIC,
+        rating: SchemaFieldTypes.NUMERIC
       }, {
         ON: 'HASH',
         PREFIX: 'article:'
@@ -156,7 +162,13 @@ export class RedisAdapter implements DatabaseAdapter {
               title: article.title,
               content: article.content,
               author: article.author,
-              tags: article.tags.replace(/,/g, ' ')
+              tags: article.tags.replace(/,/g, ' '),
+              difficulty: (article as any).difficulty || 'beginner',
+              type: (article as any).type || 'article',
+              readTime: (article as any).readTime || 5,
+              publishDate: (article as any).publishDate || '2023-01-01',
+              views: (article as any).views || 1000,
+              rating: (article as any).rating || 4.0
             });
           }
           
@@ -231,7 +243,10 @@ export class RedisAdapter implements DatabaseAdapter {
       return {
         results: results.documents.map((doc: any) => ({
           id: doc.id.replace('article:', ''),
-          ...doc.value
+          ...doc.value,
+          readTime: parseInt(doc.value.readTime) || 5,
+          views: parseInt(doc.value.views) || 1000,
+          rating: parseFloat(doc.value.rating) || 4.0
         })),
         total: results.total
       };
@@ -262,7 +277,10 @@ export class RedisAdapter implements DatabaseAdapter {
       return {
         results: results.documents.map((doc: any) => ({
           id: doc.id.replace('article:', ''),
-          ...doc.value
+          ...doc.value,
+          readTime: parseInt(doc.value.readTime) || 5,
+          views: parseInt(doc.value.views) || 1000,
+          rating: parseFloat(doc.value.rating) || 4.0
         })),
         total,
         offset,

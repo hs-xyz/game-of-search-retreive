@@ -65,6 +65,12 @@ export class ElasticsearchAdapter implements DatabaseAdapter {
               type: 'text',
               analyzer: 'article_analyzer'
             },
+            difficulty: { type: 'keyword' },
+            type: { type: 'keyword' },
+            readTime: { type: 'integer' },
+            publishDate: { type: 'date' },
+            views: { type: 'integer' },
+            rating: { type: 'float' },
             created_at: { type: 'date' }
           }
         }
@@ -89,6 +95,12 @@ export class ElasticsearchAdapter implements DatabaseAdapter {
         {
           ...article,
           id: parseInt(article.id),
+          difficulty: (article as any).difficulty || 'beginner',
+          type: (article as any).type || 'article',
+          readTime: (article as any).readTime || 5,
+          publishDate: (article as any).publishDate || '2023-01-01',
+          views: (article as any).views || 1000,
+          rating: (article as any).rating || 4.0,
           searchable_text: `${article.title} ${article.content} ${article.author} ${article.tags.join(' ')}`,
           created_at: new Date()
         }

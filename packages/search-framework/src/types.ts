@@ -9,6 +9,9 @@ export interface SearchResult {
 
 export interface BenchmarkResult {
   query: string;
+  category: string;
+  description: string;
+  expectedResults: 'low' | 'medium' | 'high';
   resultCount: number;
   iterations: number;
   totalDuration: string;

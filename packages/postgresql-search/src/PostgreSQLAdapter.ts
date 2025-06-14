@@ -23,7 +23,13 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
         title TEXT NOT NULL,
         content TEXT NOT NULL,
         author TEXT NOT NULL,
-        tags TEXT[]
+        tags TEXT[],
+        difficulty VARCHAR(20),
+        type VARCHAR(20),
+        read_time INTEGER,
+        publish_date DATE,
+        views INTEGER,
+        rating DECIMAL(3,1)
       )
     `);
 
@@ -52,18 +58,22 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
       const batch = articles.slice(i, i + batchSize);
       
       const values = batch.map((_, index) => {
-        const paramIndex = index * 4;
-        return `(${batch[index].id}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4})`;
+        const paramIndex = index * 8;
+        return `(${batch[index].id}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4}, $${paramIndex + 5}, $${paramIndex + 6}, $${paramIndex + 7}, $${paramIndex + 8})`;
       }).join(',');
 
       const params = batch.flatMap(article => [
         article.title,
         article.content,
         article.author,
-        article.tags
+        article.tags,
+        (article as any).difficulty || 'beginner',
+        (article as any).type || 'article',
+        (article as any).readTime || 5,
+        (article as any).publishDate || '2023-01-01'
       ]);
 
-      const query = `INSERT INTO articles (id, title, content, author, tags) VALUES ${values}`;
+      const query = `INSERT INTO articles (id, title, content, author, tags, difficulty, type, read_time, publish_date) VALUES ${values}`;
       
       await this.pool.query(query, params);
 
@@ -112,7 +122,7 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
     const total = await this.getFastCount();
 
     const result = await this.pool.query(`
-      SELECT id, title, content, author, tags 
+      SELECT id, title, content, author, tags, difficulty, type, read_time, publish_date, views, rating
       FROM articles 
       ORDER BY id 
       LIMIT $1 OFFSET $2
@@ -121,7 +131,9 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
     return {
       results: result.rows.map(row => ({
         ...row,
-        tags: row.tags || []
+        tags: row.tags || [],
+        readTime: row.read_time,
+        publishDate: row.publish_date
       })),
       total,
       offset,
