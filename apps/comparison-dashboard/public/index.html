@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Full Text Search Database Comparison</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Full Text Search Database Comparison</h1>
+            <p>Comprehensive performance analysis across multiple database technologies</p>
+        </div>
+        
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showTab('overview')">📊 Overview</button>
+            <button class="nav-tab" onclick="showTab('search')">🔍 Search</button>
+            <button class="nav-tab" onclick="showTab('benchmarks')">⚡ Benchmarks</button>
+            <button class="nav-tab" onclick="showTab('charts')">📈 Performance Charts</button>
+            <button class="nav-tab" onclick="showTab('comparison')">🏆 Comparison</button>
+        </div>
+
+        <div id="overview" class="tab-content active">
+            <h2 style="margin-bottom: 1rem;">Database Health Status</h2>
+            <div class="health-grid" id="healthGrid">
+                <div class="loading">Checking database health...</div>
+            </div>
+        </div>
+
+        <div id="search" class="tab-content">
+            <div class="search-section">
+                <input type="text" id="searchQuery" class="search-box" placeholder="Enter your search query..." value="machine learning">
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="searchAll()">🔍 Search All Databases</button>
+                    <button class="btn btn-secondary" onclick="loadSampleQueries()">💡 Load Sample Queries</button>
+                </div>
+                <div id="sampleQueries" style="display: none; margin-top: 1rem;">
+                    <p style="margin-bottom: 0.5rem; font-weight: 500;">Sample Queries:</p>
+                    <div class="button-group" id="sampleQueryButtons"></div>
+                </div>
+            </div>
+            <div id="searchResults"></div>
+        </div>
+
+        <div id="benchmarks" class="tab-content">
+            <div class="search-section">
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="runBenchmarks()">⚡ Run Full Benchmarks</button>
+                    <button class="btn btn-secondary" onclick="runQuickBenchmark()">🚀 Quick Benchmark</button>
+                </div>
+            </div>
+            <div id="benchmarkResults"></div>
+        </div>
+
+        <div id="charts" class="tab-content">
+            <div class="chart-container">
+                <div class="chart-title">Average Response Times by Database</div>
+                <canvas id="performanceChart" width="400" height="200"></canvas>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">Performance by Query Category</div>
+                <canvas id="categoryChart" width="400" height="200"></canvas>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">Result Accuracy vs Performance</div>
+                <canvas id="scatterChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+
+        <div id="comparison" class="tab-content">
+            <div id="comparisonData"></div>
+        </div>
+    </div>
+
+    <script src="/dashboard.js"></script>
+</body>
+</html> 
