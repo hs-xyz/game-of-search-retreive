@@ -157,7 +157,7 @@ app.get('/', (req, res) => {
 
             async function runBenchmarks() {
                 const benchmarkDiv = document.getElementById('benchmarks');
-                benchmarkDiv.innerHTML = '<div class="loading">Running benchmarks (100 iterations per query)...</div>';
+                benchmarkDiv.innerHTML = '<div class="loading">Running benchmarks (25 iterations per query)...</div>';
 
                 const results = await Promise.all(
                     databases.map(async db => {
@@ -166,7 +166,7 @@ app.get('/', (req, res) => {
                     })
                 );
 
-                benchmarkDiv.innerHTML = '<h2>Benchmark Results (100 iterations per query)</h2><div class="benchmark-grid">' +
+                benchmarkDiv.innerHTML = '<h2>Benchmark Results (25 iterations per query)</h2><div class="benchmark-grid">' +
                     results.map(result => 
                         '<div class="database-result">' +
                         '<div class="database-name">' + result.name + '</div>' +

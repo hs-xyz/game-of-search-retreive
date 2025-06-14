@@ -106,9 +106,8 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
   }
 
   async getAllRecords(limit: number, offset: number): Promise<{ results: any[]; total: number; offset: number; limit: number }> {
-    const countResult = await this.pool.query('SELECT COUNT(*) as count FROM articles');
-    const total = parseInt(countResult.rows[0].count);
-    
+    const total = await this.getFastCount();
+
     const result = await this.pool.query(`
       SELECT id, title, content, author, tags 
       FROM articles 
@@ -125,6 +124,47 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
       offset,
       limit
     };
+  }
+
+  private async getFastCount(): Promise<number> {
+    try {
+      const result = await this.pool.query(`
+        SELECT n_live_tup as count 
+        FROM pg_stat_user_tables 
+        WHERE relname = 'articles'
+      `);
+      
+      if (result.rows[0]?.count > 0) {
+        return parseInt(result.rows[0].count);
+      }
+    } catch (error) {
+      console.warn('Fast count failed, falling back to estimate:', error);
+    }
+    
+    try {
+      const result = await this.pool.query(`
+        SELECT 
+          CASE 
+            WHEN relpages > 0 THEN 
+              (reltuples/relpages) * (
+                pg_relation_size('articles') / 
+                (current_setting('block_size')::integer)
+              )
+            ELSE reltuples
+          END::bigint as estimated_count
+        FROM pg_class 
+        WHERE relname = 'articles'
+      `);
+      
+      if (result.rows[0]?.estimated_count > 0) {
+        return parseInt(result.rows[0].estimated_count);
+      }
+    } catch (error) {
+      console.warn('Estimated count failed, falling back to exact count:', error);
+    }
+    
+    const result = await this.pool.query('SELECT COUNT(*) as count FROM articles');
+    return parseInt(result.rows[0].count);
   }
 
   public searchVariants = {

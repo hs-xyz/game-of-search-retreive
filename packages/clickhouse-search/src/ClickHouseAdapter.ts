@@ -183,26 +183,23 @@ export class ClickHouseAdapter implements DatabaseAdapter {
   }
 
   async getAllRecords(limit: number, offset: number): Promise<{ results: any[]; total: number; offset: number; limit: number }> {
-    const countResult = await this.client.query({
-      query: 'SELECT count() as total FROM articles',
-      format: 'JSONEachRow'
-    });
+    const total = await this.getFastCount();
 
-    const countData = await countResult.json() as any;
-    const total = Array.isArray(countData) ? countData[0]?.total || 0 : countData.total || 0;
+    let results = [];
+    if (limit > 0) {
+      const result = await this.client.query({
+        query: `
+          SELECT id, title, content, author, tags
+          FROM articles
+          ORDER BY id ASC
+          LIMIT ${limit} OFFSET ${offset}
+        `,
+        format: 'JSONEachRow'
+      });
 
-    const result = await this.client.query({
-      query: `
-        SELECT id, title, content, author, tags
-        FROM articles
-        ORDER BY id ASC
-        LIMIT ${limit} OFFSET ${offset}
-      `,
-      format: 'JSONEachRow'
-    });
-
-    const data = await result.json() as any;
-    const results = Array.isArray(data) ? data : [data];
+      const data = await result.json() as any;
+      results = Array.isArray(data) ? data : [data];
+    }
 
     return {
       results,
@@ -210,6 +207,36 @@ export class ClickHouseAdapter implements DatabaseAdapter {
       offset,
       limit
     };
+  }
+
+  private async getFastCount(): Promise<number> {
+    try {
+      const result = await this.client.query({
+        query: `
+          SELECT sum(rows) as total
+          FROM system.parts
+          WHERE database = 'fulltext_db' AND table = 'articles' AND active = 1
+        `,
+        format: 'JSONEachRow'
+      });
+
+      const data = await result.json() as any;
+      const count = Array.isArray(data) ? data[0]?.total || 0 : data.total || 0;
+      
+      if (count > 0) {
+        return count;
+      }
+    } catch (error) {
+      console.warn('Fast count from system.parts failed:', error);
+    }
+    
+    const result = await this.client.query({
+      query: 'SELECT count() as total FROM articles',
+      format: 'JSONEachRow'
+    });
+
+    const data = await result.json() as any;
+    return Array.isArray(data) ? data[0]?.total || 0 : data.total || 0;
   }
 
   public searchVariants = {

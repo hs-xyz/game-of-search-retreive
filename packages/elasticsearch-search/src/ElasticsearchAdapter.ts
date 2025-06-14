@@ -167,19 +167,28 @@ export class ElasticsearchAdapter implements DatabaseAdapter {
   }
 
   async getAllRecords(limit: number, offset: number): Promise<{ results: any[]; total: number; offset: number; limit: number }> {
+    const total = await this.getFastCount();
+
+    if (limit === 0) {
+      return {
+        results: [],
+        total,
+        offset,
+        limit
+      };
+    }
+
     const response = await this.client.search({
       index: this.indexName,
       body: {
         query: { match_all: {} },
         from: offset,
         size: limit,
-        sort: [{ id: 'asc' }],
-        track_total_hits: true
+        sort: [{ id: 'asc' }]
       }
     });
 
     const results = (response.hits?.hits || []).map((hit: any) => hit._source);
-    const total = (response.hits?.total as any)?.value || response.hits?.total || 0;
 
     return {
       results,
@@ -187,6 +196,31 @@ export class ElasticsearchAdapter implements DatabaseAdapter {
       offset,
       limit
     };
+  }
+
+  private async getFastCount(): Promise<number> {
+    try {
+      const response = await this.client.count({
+        index: this.indexName
+      });
+      return response.count || 0;
+    } catch (error) {
+      console.warn('Fast count failed, falling back to search count:', error);
+      try {
+        const response = await this.client.search({
+          index: this.indexName,
+          body: {
+            query: { match_all: {} },
+            size: 0,
+            track_total_hits: true
+          }
+        });
+        return (response.hits?.total as any)?.value || response.hits?.total || 0;
+      } catch (error) {
+        console.warn('Fallback count failed:', error);
+        return 0;
+      }
+    }
   }
 
   public searchVariants = {

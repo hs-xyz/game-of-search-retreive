@@ -96,7 +96,8 @@ export class MongoDBAdapter implements DatabaseAdapter {
   }
 
   async getAllRecords(limit: number, offset: number): Promise<{ results: any[]; total: number; offset: number; limit: number }> {
-    const totalCount = await this.collection.countDocuments();
+    const total = await this.getFastCount();
+
     const documents = await this.collection.find({})
       .skip(offset)
       .limit(limit)
@@ -110,10 +111,24 @@ export class MongoDBAdapter implements DatabaseAdapter {
         author: doc.author,
         tags: doc.tags
       })),
-      total: totalCount,
+      total,
       offset,
       limit
     };
+  }
+
+  private async getFastCount(): Promise<number> {
+    try {
+      return await this.collection.estimatedDocumentCount();
+    } catch (error) {
+      console.warn('Fast count failed, falling back to accurate count:', error);
+      try {
+        return await this.collection.countDocuments({}, { hint: "_id_" });
+      } catch (error) {
+        console.warn('Accurate count with hint failed, using basic count:', error);
+        return await this.collection.countDocuments({});
+      }
+    }
   }
 
   public searchVariants = {

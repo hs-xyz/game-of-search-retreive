@@ -123,18 +123,14 @@ export class DuckDBAdapter implements DatabaseAdapter {
   }
 
   async getAllRecords(limit: number, offset: number): Promise<{ results: any[]; total: number; offset: number; limit: number }> {
-    const countQuery = 'SELECT COUNT(*) as total FROM articles';
-    const selectQuery = `
+    const total = await this.getFastCount();
+
+    const results = await this.executeQuery(`
       SELECT id, title, content, author, tags
       FROM articles 
       ORDER BY id 
       LIMIT ${limit} OFFSET ${offset}
-    `;
-
-    const [totalResult, results] = await Promise.all([
-      this.executeQuery(countQuery),
-      this.executeQuery(selectQuery)
-    ]);
+    `);
 
     return {
       results: results.map((row: any) => ({
@@ -144,10 +140,29 @@ export class DuckDBAdapter implements DatabaseAdapter {
         author: row.author,
         tags: row.tags ? row.tags.split(',') : []
       })),
-      total: totalResult[0]?.total || 0,
+      total,
       offset,
       limit
     };
+  }
+
+  private async getFastCount(): Promise<number> {
+    try {
+      const result = await this.executeQuery(`
+        SELECT estimated_size as count 
+        FROM duckdb_tables() 
+        WHERE table_name = 'articles'
+      `);
+      
+      if (result[0]?.count > 0) {
+        return result[0].count;
+      }
+    } catch (error) {
+      console.warn('Fast count failed, falling back to accurate count:', error);
+    }
+    
+    const result = await this.executeQuery('SELECT COUNT(*) as count FROM articles');
+    return result[0]?.count || 0;
   }
 
   private async executeQuery(query: string): Promise<any[]> {

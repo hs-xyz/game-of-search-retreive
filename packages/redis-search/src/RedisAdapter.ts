@@ -242,6 +242,17 @@ export class RedisAdapter implements DatabaseAdapter {
 
   async getAllRecords(limit: number, offset: number): Promise<{ results: any[]; total: number; offset: number; limit: number }> {
     try {
+      const total = await this.getFastCount();
+      
+      if (limit === 0) {
+        return {
+          results: [],
+          total,
+          offset,
+          limit
+        };
+      }
+
       const results = await this.client.ft.search('articles', '*', {
         LIMIT: { from: offset, size: limit }
       });
@@ -251,13 +262,25 @@ export class RedisAdapter implements DatabaseAdapter {
           id: doc.id.replace('article:', ''),
           ...doc.value
         })),
-        total: results.total,
+        total,
         offset,
         limit
       };
     } catch (error: any) {
       console.error('Get all records error:', error.message);
       throw error;
+    }
+  }
+
+  private async getFastCount(): Promise<number> {
+    try {
+      const results = await this.client.ft.search('articles', '*', {
+        LIMIT: { from: 0, size: 0 }
+      });
+      return results.total;
+    } catch (error: any) {
+      console.warn('Fast count failed:', error.message);
+      return 0;
     }
   }
 } 

@@ -139,7 +139,7 @@ export class SearchApp {
   private async runFrameworkBenchmark(): Promise<Omit<BenchmarkResponse, 'database'>> {
     const benchmarkQueries = getBenchmarkQueries();
     const results = [];
-    const ITERATIONS = 100;
+    const ITERATIONS = 25;
 
     for (const query of benchmarkQueries) {
       const durations: number[] = [];
