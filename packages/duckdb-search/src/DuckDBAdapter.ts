@@ -14,8 +14,8 @@ export class DuckDBAdapter implements DatabaseAdapter {
     await this.createTable();
     await this.seedData();
     
-    const count = await this.executeQuery('SELECT COUNT(*) as count FROM articles');
-    console.log(`DuckDB database initialized with ${count[0]?.count || 0} articles`);
+    const count = await this.getCount();
+    console.log(`DuckDB database initialized with ${count} articles`);
   }
 
   private async createTable(): Promise<void> {
@@ -62,14 +62,15 @@ export class DuckDBAdapter implements DatabaseAdapter {
 
       await this.connection!.run('COMMIT');
       console.log(`Transaction committed successfully`);
+      
     } catch (error) {
       console.error('Error during seeding:', error);
       await this.connection!.run('ROLLBACK');
       throw error;
     }
 
-    const count = await this.executeQuery('SELECT COUNT(*) as count FROM articles');
-    console.log(`Successfully seeded ${articles.length} articles to DuckDB. Verified count: ${count[0]?.count || 0}`);
+    const count = await this.getCount();
+    console.log(`Successfully seeded ${articles.length} articles to DuckDB. Verified count: ${count}`);
   }
 
   private escapeString(str: string): string {
@@ -104,21 +105,21 @@ export class DuckDBAdapter implements DatabaseAdapter {
       LIMIT ${limit}
     `;
 
-    const [totalResult, searchResult] = await Promise.all([
-      this.executeQuery(countQuery),
+    const [total, searchResult] = await Promise.all([
+      this.getCount(countQuery),
       this.executeQuery(searchQuery)
     ]);
 
     return {
       results: searchResult.map((row: any) => ({
-        id: row.id,
-        title: row.title,
-        content: row.content,
-        author: row.author,
-        tags: row.tags ? row.tags.split(',') : [],
-        relevance_score: row.relevance_score
+        id: row[0],
+        title: row[1], 
+        content: row[2],
+        author: row[3],
+        tags: row[4] ? row[4].split(',') : [],
+        relevance_score: row[5]
       })),
-      total: totalResult[0]?.total || 0
+      total
     };
   }
 
@@ -134,11 +135,11 @@ export class DuckDBAdapter implements DatabaseAdapter {
 
     return {
       results: results.map((row: any) => ({
-        id: row.id,
-        title: row.title,
-        content: row.content,
-        author: row.author,
-        tags: row.tags ? row.tags.split(',') : []
+        id: row[0],
+        title: row[1],
+        content: row[2],
+        author: row[3],
+        tags: row[4] ? row[4].split(',') : []
       })),
       total,
       offset,
@@ -146,28 +147,27 @@ export class DuckDBAdapter implements DatabaseAdapter {
     };
   }
 
-  private async getFastCount(): Promise<number> {
-    try {
-      const result = await this.executeQuery(`
-        SELECT estimated_size as count 
-        FROM duckdb_tables() 
-        WHERE table_name = 'articles'
-      `);
-      
-      if (result[0]?.count > 0) {
-        return result[0].count;
-      }
-    } catch (error) {
-      console.warn('Fast count failed, falling back to accurate count:', error);
-    }
-    
-    const result = await this.executeQuery('SELECT COUNT(*) as count FROM articles');
-    return result[0]?.count || 0;
-  }
-
   private async executeQuery(query: string): Promise<any[]> {
     const result = await this.connection!.run(query);
     const rows = await result.getRows();
     return rows;
+  }
+
+  private async getCount(query: string = 'SELECT COUNT(*) FROM articles'): Promise<number> {
+    const result = await this.executeQuery(query);
+    if (result && result.length > 0 && result[0] && result[0].length > 0) {
+      const count = result[0][0];
+      return typeof count === 'bigint' ? Number(count) : (count || 0);
+    }
+    return 0;
+  }
+
+  private async getFastCount(): Promise<number> {
+    try {
+      return await this.getCount('SELECT COUNT(*) as count FROM articles');
+    } catch (error) {
+      console.warn('Count query failed:', error);
+      return 0;
+    }
   }
 } 
