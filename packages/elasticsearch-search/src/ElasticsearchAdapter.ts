@@ -20,7 +20,8 @@ export class ElasticsearchAdapter implements DatabaseAdapter {
         settings: {
           number_of_shards: 1,
           number_of_replicas: 0,
-          max_result_window: 200000,
+          max_result_window: 2147483647,
+          "index.max_result_window": 2147483647,
           analysis: {
             analyzer: {
               article_analyzer: {
@@ -70,7 +71,7 @@ export class ElasticsearchAdapter implements DatabaseAdapter {
       }
     });
 
-    console.log('Elasticsearch index created with optimized mapping and increased max_result_window');
+    console.log('Elasticsearch index created with unlimited result window');
     await this.seedData();
   }
 
@@ -117,7 +118,8 @@ export class ElasticsearchAdapter implements DatabaseAdapter {
             type: 'best_fields'
           }
         },
-        size: effectiveLimit
+        size: effectiveLimit,
+        track_total_hits: true
       }
     });
 
@@ -149,7 +151,8 @@ export class ElasticsearchAdapter implements DatabaseAdapter {
         query: { match_all: {} },
         from: offset,
         size: effectiveLimit,
-        sort: [{ id: 'asc' }]
+        sort: [{ id: 'asc' }],
+        track_total_hits: true
       }
     });
 
@@ -190,6 +193,7 @@ export class ElasticsearchAdapter implements DatabaseAdapter {
 
   public searchVariants = {
     phrase: async (query: string, limit: number) => {
+      const effectiveLimit = Math.min(limit, 100);
       const response = await this.client.search({
         index: this.indexName,
         body: {
@@ -200,7 +204,8 @@ export class ElasticsearchAdapter implements DatabaseAdapter {
               type: 'phrase'
             }
           },
-          size: limit
+          size: effectiveLimit,
+          track_total_hits: true
         }
       });
 
@@ -216,6 +221,7 @@ export class ElasticsearchAdapter implements DatabaseAdapter {
     },
 
     bool: async (query: string, limit: number) => {
+      const effectiveLimit = Math.min(limit, 100);
       const response = await this.client.search({
         index: this.indexName,
         body: {
@@ -228,7 +234,8 @@ export class ElasticsearchAdapter implements DatabaseAdapter {
               ]
             }
           },
-          size: limit
+          size: effectiveLimit,
+          track_total_hits: true
         }
       });
 
