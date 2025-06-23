@@ -1,5 +1,8 @@
 # Full Text Search Database Comparison
 
+> **⚠️ WORK IN PROGRESS**  
+> This project is currently under active development. Features, documentation, and implementation details may change significantly. Some features described below may not be fully implemented yet.
+
 A comprehensive benchmarking suite for comparing full-text search performance across multiple database technologies with enhanced data generation, sophisticated testing scenarios, and interactive visual analysis.
 
 ## 🆕 New Features & Enhancements
