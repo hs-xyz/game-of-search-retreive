@@ -133,11 +133,11 @@ export class DuckDBAdapter implements DatabaseAdapter {
         tags: row[4] ? row[4].split(',') : [],
         difficulty: row[5],
         type: row[6],
-        readTime: row[7],
+        readTime: typeof row[7] === 'bigint' ? Number(row[7]) : row[7],
         publishDate: row[8],
-        views: row[9],
-        rating: row[10],
-        relevance_score: row[11]
+        views: typeof row[9] === 'bigint' ? Number(row[9]) : row[9],
+        rating: typeof row[10] === 'bigint' ? Number(row[10]) : row[10],
+        relevance_score: typeof row[11] === 'bigint' ? Number(row[11]) : row[11]
       })),
       total
     };
@@ -163,10 +163,10 @@ export class DuckDBAdapter implements DatabaseAdapter {
         tags: row[4] ? row[4].split(',') : [],
         difficulty: row[5],
         type: row[6],
-        readTime: row[7],
+        readTime: typeof row[7] === 'bigint' ? Number(row[7]) : row[7],
         publishDate: row[8],
-        views: row[9],
-        rating: row[10]
+        views: typeof row[9] === 'bigint' ? Number(row[9]) : row[9],
+        rating: typeof row[10] === 'bigint' ? Number(row[10]) : row[10]
       })),
       total,
       offset,

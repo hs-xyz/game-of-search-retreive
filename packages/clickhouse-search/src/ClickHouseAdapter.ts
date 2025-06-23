@@ -18,7 +18,7 @@ export class ClickHouseAdapter implements DatabaseAdapter {
         console.log(`ClickHouse connection attempt ${attempt}/${maxRetries}...`);
         
         this.client = createClient({
-          host: 'http://clickhouse:8123',
+          host: 'http://localhost:8123',
           username: 'admin',
           password: 'clickhouse123',
           database: 'fulltext_db'
@@ -31,9 +31,14 @@ export class ClickHouseAdapter implements DatabaseAdapter {
           query: 'CREATE DATABASE IF NOT EXISTS fulltext_db'
         });
 
+        // Drop and recreate the table to ensure new schema
+        await this.client.command({
+          query: 'DROP TABLE IF EXISTS articles'
+        });
+
         await this.client.command({
           query: `
-            CREATE TABLE IF NOT EXISTS articles (
+            CREATE TABLE articles (
               id UInt32,
               title String,
               content String,
@@ -41,7 +46,13 @@ export class ClickHouseAdapter implements DatabaseAdapter {
               tags Array(String),
               searchable_text String,
               title_tokens Array(String),
-              content_tokens Array(String)
+              content_tokens Array(String),
+              difficulty LowCardinality(String),
+              type LowCardinality(String),
+              read_time UInt16,
+              publish_date Date,
+              views UInt32,
+              rating Float32
             ) ENGINE = MergeTree()
             ORDER BY (author, id)
             SETTINGS index_granularity = 8192
@@ -113,7 +124,13 @@ export class ClickHouseAdapter implements DatabaseAdapter {
         tags: article.tags,
         searchable_text: `${article.title} ${article.content} ${article.author} ${article.tags.join(' ')}`,
         title_tokens: article.title.toLowerCase().split(/\W+/).filter(Boolean),
-        content_tokens: article.content.toLowerCase().split(/\W+/).filter(Boolean)
+        content_tokens: article.content.toLowerCase().split(/\W+/).filter(Boolean),
+        difficulty: (article as any).difficulty || 'beginner',
+        type: (article as any).type || 'article',
+        read_time: (article as any).readTime || 5,
+        publish_date: (article as any).publishDate || '2023-01-01',
+        views: (article as any).views || 1000,
+        rating: (article as any).rating || 4.0
       }));
 
       await this.client.insert({
